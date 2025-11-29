@@ -86,7 +86,7 @@ flutter run -d chrome
    SECRET_KEY=your-super-secret-key-change-this-in-production
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=43200
-   PYTHON_VERSION=3.11
+   PYTHON_VERSION=3.11.0
    ```
 
 5. **Click "Create Web Service"**
