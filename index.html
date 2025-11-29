@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sathyabama Bus Tracking - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #FFD700, #FFA000);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        p {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 32px 0;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .feature h3 {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .feature p {
+            font-size: 14px;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #FFD700, #FFA000);
+            color: #212121;
+            box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .status {
+            display: flex;
+            gap: 24px;
+            margin: 32px 0;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+        }
+
+        .status-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .signature {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 32px 24px;
+            }
+
+            h1 {
+                font-size: 36px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            .status {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Sathyabama <span class="gradient-text">Bus Tracker</span></h1>
+        <p>A premium, real-time bus tracking system for Sathyabama University with glassmorphism UI, permanent driver
+            login, and free OpenStreetMaps integration.</p>
+
+        <div class="status">
+            <div class="status-item">
+                <div class="status-label">Backend</div>
+                <div class="status-value">✅ Ready</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Admin Portal</div>
+                <div class="status-value">✅ Ready</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Mobile App</div>
+                <div class="status-value">⏳ Soon</div>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🚌 Real-time Tracking</h3>
+                <p>Track all 300 buses simultaneously with live GPS updates every 5-10 seconds</p>
+            </div>
+            <div class="feature">
+                <h3>🔒 Permanent Login</h3>
+                <p>Drivers stay logged in forever - no session expiration hassle</p>
+            </div>
+            <div class="feature">
+                <h3>🗺️ OpenStreetMaps</h3>
+                <p>Free maps with no API costs - save ₹3,000-10,000/month</p>
+            </div>
+            <div class="feature">
+                <h3>✨ Glassmorphism UI</h3>
+                <p>Premium Apple-like design with blur effects and smooth animations</p>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <a href="admin-dashboard/index.html" class="btn btn-primary">
+                Open Admin Dashboard
+            </a>
+            <a href="https://github.com" class="btn btn-secondary" target="_blank">
+                View Documentation
+            </a>
+        </div>
+
+        <div class="footer">
+            <p style="margin-bottom: 16px; color: rgba(255, 255, 255, 0.8);">
+                <strong>Tech Stack:</strong> FastAPI • PostgreSQL • Redis • OpenStreetMaps • Flutter
+            </p>
+            <p class="signature">Made by S Khavin</p>
+        </div>
+    </div>
+</body>
+
+</html>
