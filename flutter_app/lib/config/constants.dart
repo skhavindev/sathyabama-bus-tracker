@@ -1,7 +1,7 @@
 class AppConfig {
   // API Configuration
   // Change this URL when deploying to production
-  static const String apiBaseUrl = 'http://localhost:8000/api/v1';
+  static const String apiBaseUrl = 'https://sathyabama-bus-tracker.onrender.com/api/v1';
   
   // For production/deployed backend, use:
   // static const String apiBaseUrl = 'https://your-app.onrender.com/api/v1';
