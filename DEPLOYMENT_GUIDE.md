@@ -68,15 +68,15 @@ flutter run -d chrome
    - **Name**: `sathyabama-bus-tracker`
    - **Region**: Choose closest to you
    - **Branch**: `main`
-   - **Root Directory**: Leave empty (or `backend` if you push the whole project)
+   - **Root Directory**: `backend`
    - **Runtime**: `Python 3`
    - **Build Command**: 
      ```bash
-     pip install -r requirements.txt
+     cd backend && pip install -r requirements.txt
      ```
    - **Start Command**:
      ```bash
-     uvicorn app.main:app --host 0.0.0.0 --port $PORT
+     cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
      ```
 
 4. **Environment Variables:**
@@ -86,7 +86,7 @@ flutter run -d chrome
    SECRET_KEY=your-super-secret-key-change-this-in-production
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=43200
-   PYTHON_VERSION=3.11.0
+   PYTHON_VERSION=3.11
    ```
 
 5. **Click "Create Web Service"**
