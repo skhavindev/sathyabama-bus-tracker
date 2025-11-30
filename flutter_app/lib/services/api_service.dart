@@ -132,7 +132,7 @@ class ApiService {
   // Student endpoints
   Future<List<BusLocation>> getActiveBuses() async {
     try {
-      final response = await _dio.get('/api/v1/student/buses');
+      final response = await _dio.get('/api/v1/student/buses/active');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['buses'] ?? [];
