@@ -285,14 +285,14 @@
 
                 if (response.ok) {
                     // Check if user is admin
-                    if (!data.is_admin) {
+                    if (!data.driver.is_admin) {
                         showError('Access denied. Admin privileges required.');
                         return;
                     }
 
                     // Store token
                     localStorage.setItem('admin_token', data.access_token);
-                    localStorage.setItem('admin_name', data.name);
+                    localStorage.setItem('admin_name', data.driver.name);
 
                     // Redirect to admin dashboard
                     window.location.href = '/admin';
