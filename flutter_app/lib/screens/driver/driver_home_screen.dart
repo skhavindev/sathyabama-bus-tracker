@@ -41,7 +41,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       setState(() {
         _selectedBus = profile.assignedBus;
         _selectedRoute = profile.assignedRoute;
-        // Only show assigned bus, no random buses
+        // Only show assigned bus
         _buses = profile.assignedBus != null ? [profile.assignedBus!] : [];
         _isLoading = false;
       });
@@ -58,7 +58,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Future<void> _startShift() async {
     if (_selectedBus == null || _selectedRoute == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select bus and route')),
+        const SnackBar(content: Text('No bus or route assigned. Contact admin.')),
       );
       return;
     }
@@ -66,14 +66,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     setState(() => _isStartingShift = true);
 
     try {
-      await ApiService().startShift(_selectedBus!, _selectedRoute!);
+      // Get the route name from the route ID
+      final routeMap = _routes.firstWhere(
+        (r) => r['id'] == _selectedRoute,
+        orElse: () => {'id': _selectedRoute!, 'name': 'Unknown Route'},
+      );
+      
+      await ApiService().startShift(_selectedBus!, routeMap['name']!);
       if (mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => DriverTrackingScreen(
               busNumber: _selectedBus!,
-              routeName: _routes
-                  .firstWhere((r) => r['id'] == _selectedRoute)['name']!,
+              routeName: routeMap['name']!,
             ),
           ),
         );
@@ -315,47 +320,107 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
                         const SizedBox(height: AppleSpacing.xl),
 
-                        // Bus selection
-                        Text('Bus Number', style: AppleTypography.subhead),
+                        // Assigned Bus Display
+                        Text('Your Assigned Bus', style: AppleTypography.subhead),
                         const SizedBox(height: AppleSpacing.sm),
-                        _buildDropdown(
-                          value: _selectedBus,
-                          hint: 'Select bus number...',
-                          items: _buses
-                              .map((b) => DropdownMenuItem(
-                                    value: b,
-                                    child: Text('Bus $b'),
-                                  ))
-                              .toList(),
-                          onChanged: (v) => setState(() => _selectedBus = v),
+                        Container(
+                          padding: const EdgeInsets.all(AppleSpacing.base),
+                          decoration: BoxDecoration(
+                            color: AppleColors.systemGray6,
+                            borderRadius: AppleRadius.mdAll,
+                            border: Border.all(color: AppleColors.systemGray5),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: AppleColors.goldGradient,
+                                  borderRadius: AppleRadius.smAll,
+                                ),
+                                child: const Icon(
+                                  Icons.directions_bus_rounded,
+                                  color: AppleColors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: AppleSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  _selectedBus ?? 'No bus assigned',
+                                  style: AppleTypography.headline.copyWith(
+                                    color: _selectedBus != null 
+                                        ? AppleColors.labelPrimary 
+                                        : AppleColors.systemGray,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
 
                         const SizedBox(height: AppleSpacing.lg),
 
-                        // Route selection
-                        Text('Route', style: AppleTypography.subhead),
+                        // Assigned Route Display
+                        Text('Your Route', style: AppleTypography.subhead),
                         const SizedBox(height: AppleSpacing.sm),
-                        _buildDropdown(
-                          value: _selectedRoute,
-                          hint: 'Select route...',
-                          items: _routes
-                              .map((r) => DropdownMenuItem(
-                                    value: r['id'],
-                                    child: Text(r['name']!),
-                                  ))
-                              .toList(),
-                          onChanged: (v) => setState(() => _selectedRoute = v),
+                        Container(
+                          padding: const EdgeInsets.all(AppleSpacing.base),
+                          decoration: BoxDecoration(
+                            color: AppleColors.systemGray6,
+                            borderRadius: AppleRadius.mdAll,
+                            border: Border.all(color: AppleColors.systemGray5),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: AppleColors.redGradient,
+                                  borderRadius: AppleRadius.smAll,
+                                ),
+                                child: const Icon(
+                                  Icons.route_rounded,
+                                  color: AppleColors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: AppleSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  _selectedRoute != null
+                                      ? _routes.firstWhere(
+                                          (r) => r['id'] == _selectedRoute,
+                                          orElse: () => {'name': 'Unknown Route'},
+                                        )['name']!
+                                      : 'No route assigned',
+                                  style: AppleTypography.body.copyWith(
+                                    color: _selectedRoute != null 
+                                        ? AppleColors.labelPrimary 
+                                        : AppleColors.systemGray,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
 
                         const SizedBox(height: AppleSpacing.md),
 
-                        // Bus not listed link
-                        TextButton(
-                          onPressed: _showCustomBusDialog,
-                          child: Text(
-                            'Bus not listed? Request custom bus/route',
+                        // Contact admin if no assignment
+                        if (_selectedBus == null || _selectedRoute == null)
+                          TextButton(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please contact admin to assign a bus and route'),
+                                ),
+                              );
+                            },
+                            child: Text(
+                            'No assignment? Contact admin',
                             style: AppleTypography.subhead.copyWith(
-                              color: AppleColors.accentGold,
+                              color: AppleColors.error,
                             ),
                           ),
                         ),
@@ -379,26 +444,36 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
                   const SizedBox(height: AppleSpacing.xl),
 
-                  // Recent buses
-                  Text('Recent Buses', style: AppleTypography.headline),
-                  const SizedBox(height: AppleSpacing.md),
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _buses.take(5).length,
-                      separatorBuilder: (_, __) =>
+                  // Info card
+                  if (_selectedBus != null && _selectedRoute != null)
+                    Container(
+                      padding: const EdgeInsets.all(AppleSpacing.base),
+                      decoration: BoxDecoration(
+                        color: AppleColors.accentGold.withValues(alpha: 0.1),
+                        borderRadius: AppleRadius.mdAll,
+                        border: Border.all(
+                          color: AppleColors.accentGold.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: AppleColors.accentGold,
+                            size: 20,
+                          ),
                           const SizedBox(width: AppleSpacing.sm),
-                      itemBuilder: (context, index) {
-                        final bus = _buses[index];
-                        return PremiumChip(
-                          label: bus,
-                          isSelected: _selectedBus == bus,
-                          onTap: () => setState(() => _selectedBus = bus),
-                        );
-                      },
+                          Expanded(
+                            child: Text(
+                              'Tap "Start Shift" to begin location sharing',
+                              style: AppleTypography.caption1.copyWith(
+                                color: AppleColors.labelPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
