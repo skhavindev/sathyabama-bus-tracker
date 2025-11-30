@@ -149,7 +149,14 @@ def admin_login():
     """Serve admin login page."""
     static_file = os.path.join(os.path.dirname(__file__), "static", "login.html")
     if os.path.exists(static_file):
-        return FileResponse(static_file)
+        return FileResponse(
+            static_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     return {"message": "Login page not found"}
 
 
@@ -158,7 +165,14 @@ def admin_dashboard():
     """Serve admin dashboard."""
     static_file = os.path.join(os.path.dirname(__file__), "static", "admin.html")
     if os.path.exists(static_file):
-        return FileResponse(static_file)
+        return FileResponse(
+            static_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     return {"message": "Admin dashboard not found"}
 
 
