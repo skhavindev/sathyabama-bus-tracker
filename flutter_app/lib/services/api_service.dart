@@ -86,12 +86,14 @@ class ApiService {
   Future<void> updateLocation(double lat, double lng, double speed) async {
     try {
       await _dio.post(
-        '/api/v1/driver/location',
+        '/api/v1/driver/location/update',
         data: {
+          'bus_number': 'BUS001', // TODO: Get from driver profile
           'latitude': lat,
           'longitude': lng,
           'speed': speed,
-          'timestamp': DateTime.now().toIso8601String(),
+          'heading': 0.0,
+          'accuracy': 10.0,
         },
       );
     } on DioException catch (e) {
