@@ -94,3 +94,52 @@ def get_current_admin(token: str = None):
         return driver
     
     return verify_admin
+
+
+
+def get_current_driver():
+    """Dependency to get current authenticated driver."""
+    from fastapi import Depends, HTTPException, status
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    from sqlalchemy.orm import Session
+    from ..database import get_db
+    from ..models.driver import Driver
+    
+    security = HTTPBearer()
+    
+    def verify_driver(
+        credentials: HTTPAuthorizationCredentials = Depends(security),
+        db: Session = Depends(get_db)
+    ):
+        token = credentials.credentials
+        payload = decode_access_token(token)
+        
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials"
+            )
+        
+        driver_id = payload.get("driver_id")
+        if not driver_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        
+        driver = db.query(Driver).filter(Driver.driver_id == driver_id).first()
+        if not driver:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Driver not found"
+            )
+        
+        if not driver.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is inactive"
+            )
+        
+        return driver
+    
+    return verify_driver

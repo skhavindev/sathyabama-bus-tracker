@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
 from ..models.driver import Driver
+from ..services.auth_service import get_current_driver
 from ..models.location import ActiveBusLocation
 from ..models.route import Route
 from ..models.bus import Bus
@@ -11,6 +12,13 @@ from ..services.cache_service import CacheService
 from datetime import datetime
 
 router = APIRouter(prefix="/api/v1/driver", tags=["Driver"])
+
+
+@router.get("/profile")
+def get_driver_profile(current_driver: Driver = Depends(get_current_driver)):
+    """Get current driver's profile."""
+    from ..schemas.driver import DriverResponse
+    return DriverResponse.from_orm(current_driver)
 
 
 @router.post("/start-shift")
