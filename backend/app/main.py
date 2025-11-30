@@ -24,11 +24,25 @@ app = FastAPI(
 
 
 @app.on_event("startup")
-async def create_admin_user():
-    """Create default admin user on startup if it doesn't exist."""
+async def startup_event():
+    """Initialize database and create admin user on startup."""
+    print("🚀 Starting up...")
+    
+    # Import all models to ensure they're registered
+    from .models.bus_route import BusRoute
+    from .models.audit_log import AuditLog
+    
+    # Create all tables (including new ones)
+    print("📊 Creating/updating database tables...")
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables ready")
+    except Exception as e:
+        print(f"❌ Error creating tables: {e}")
+    
+    # Create admin user
     db = next(get_db())
     try:
-        # Check if admin user already exists
         admin_phone = "+919876543210"
         existing_admin = db.query(Driver).filter(Driver.phone == admin_phone).first()
         
@@ -46,12 +60,24 @@ async def create_admin_user():
             db.commit()
             print(f"✅ Admin user created: {admin_phone} / password: admin")
         else:
-            print(f"✅ Admin user already exists: {admin_phone}")
+            # Ensure existing user has admin privileges
+            if not existing_admin.is_admin:
+                existing_admin.is_admin = True
+                db.commit()
+                print(f"✅ Admin privileges granted to: {admin_phone}")
+            else:
+                print(f"✅ Admin user already exists: {admin_phone}")
     except Exception as e:
         print(f"❌ Error creating admin user: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
     finally:
         db.close()
+    
+    print("🎉 Startup complete!")
+    print(f"📝 Admin login: {admin_phone} / admin")
+    print(f"🌐 Access dashboard at: /admin/login")
 
 # CORS middleware
 app.add_middleware(
