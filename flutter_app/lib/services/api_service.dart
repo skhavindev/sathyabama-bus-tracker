@@ -37,7 +37,7 @@ class ApiService {
   Future<LoginResponse> loginDriver(String phone, String password) async {
     try {
       final response = await _dio.post(
-        '/auth/login',
+        '/api/v1/auth/login',
         data: {
           'phone': phone,
           'password': password,
@@ -58,7 +58,7 @@ class ApiService {
   // Driver endpoints
   Future<DriverProfile> getDriverProfile() async {
     try {
-      final response = await _dio.get('/driver/profile');
+      final response = await _dio.get('/api/v1/driver/profile');
 
       if (response.statusCode == 200) {
         return DriverProfile.fromJson(response.data);
@@ -72,7 +72,7 @@ class ApiService {
   Future<void> startShift(String busNumber, String route) async {
     try {
       await _dio.post(
-        '/driver/start-shift',
+        '/api/v1/driver/start-shift',
         data: {
           'bus_number': busNumber,
           'route': route,
@@ -86,7 +86,7 @@ class ApiService {
   Future<void> updateLocation(double lat, double lng, double speed) async {
     try {
       await _dio.post(
-        '/driver/location',
+        '/api/v1/driver/location',
         data: {
           'latitude': lat,
           'longitude': lng,
@@ -104,7 +104,7 @@ class ApiService {
 
   Future<void> endShift() async {
     try {
-      await _dio.post('/driver/end-shift');
+      await _dio.post('/api/v1/driver/end-shift');
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -117,7 +117,7 @@ class ApiService {
   ) async {
     try {
       await _dio.post(
-        '/driver/request-bus',
+        '/api/v1/driver/request-bus',
         data: {
           'bus_number': busNumber,
           'route': route,
@@ -132,7 +132,7 @@ class ApiService {
   // Student endpoints
   Future<List<BusLocation>> getActiveBuses() async {
     try {
-      final response = await _dio.get('/student/buses');
+      final response = await _dio.get('/api/v1/student/buses');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['buses'] ?? [];
