@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Sathyabama Bus Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 3rem;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo i {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+            font-size: 0.875rem;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .info-box p {
+            font-size: 0.875rem;
+            color: #555;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box code {
+            background: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            color: #667eea;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 2rem 1.5rem;
+            }
+
+            .logo h1 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <i class="fas fa-bus"></i>
+            <h1>Sathyabama Bus Tracker</h1>
+            <p>Admin Dashboard</p>
+        </div>
+
+        <div class="error-message" id="error-message">
+            Invalid credentials. Please try again.
+        </div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-phone"></i>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        placeholder="+919876543210" 
+                        pattern="^\+91[0-9]{10}$"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-lock"></i>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        placeholder="Enter your password"
+                        required
+                    >
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="login-btn">
+                <span id="btn-text">Login</span>
+                <div class="spinner" id="spinner" style="display: none;"></div>
+            </button>
+        </form>
+
+        <div class="info-box">
+            <p><strong>Default Admin Credentials:</strong></p>
+            <p>Phone: <code>+919876543210</code></p>
+            <p>Password: <code>admin</code></p>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const phoneInput = document.getElementById('phone');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('login-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('spinner');
+        const errorMessage = document.getElementById('error-message');
+
+        // Check if already logged in
+        if (localStorage.getItem('admin_token')) {
+            window.location.href = '/admin';
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const phone = phoneInput.value.trim();
+            const password = passwordInput.value;
+
+            // Validate phone format
+            if (!phone.match(/^\+91[0-9]{10}$/)) {
+                showError('Phone number must be in format: +91XXXXXXXXXX');
+                return;
+            }
+
+            // Show loading state
+            loginBtn.disabled = true;
+            btnText.textContent = 'Logging in...';
+            spinner.style.display = 'block';
+            errorMessage.classList.remove('show');
+
+            try {
+                // Call login API
+                const response = await fetch('/api/v1/auth/driver/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Check if user is admin
+                    if (!data.is_admin) {
+                        showError('Access denied. Admin privileges required.');
+                        return;
+                    }
+
+                    // Store token
+                    localStorage.setItem('admin_token', data.access_token);
+                    localStorage.setItem('admin_name', data.name);
+
+                    // Redirect to admin dashboard
+                    window.location.href = '/admin';
+                } else {
+                    showError(data.detail || 'Invalid credentials. Please try again.');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Connection error. Please check if the server is running.');
+            } finally {
+                // Reset button state
+                loginBtn.disabled = false;
+                btnText.textContent = 'Login';
+                spinner.style.display = 'none';
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+            
+            // Hide error after 5 seconds
+            setTimeout(() => {
+                errorMessage.classList.remove('show');
+            }, 5000);
+        }
+
+        // Auto-format phone number
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^0-9+]/g, '');
+            
+            // Auto-add +91 prefix if not present
+            if (value && !value.startsWith('+91')) {
+                if (value.startsWith('91')) {
+                    value = '+' + value;
+                } else if (value.startsWith('+')) {
+                    value = '+91' + value.substring(1);
+                } else {
+                    value = '+91' + value;
+                }
+            }
+            
+            // Limit to +91 + 10 digits
+            if (value.length > 13) {
+                value = value.substring(0, 13);
+            }
+            
+            e.target.value = value;
+        });
+
+        // Allow Enter key to submit
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loginForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>

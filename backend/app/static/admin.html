@@ -793,8 +793,14 @@
             const token = localStorage.getItem('admin_token');
             if (!token) {
                 window.location.href = '/admin/login';
-                return;
+                return false;
             }
+            
+            // Set admin name in header
+            const adminName = localStorage.getItem('admin_name') || 'Admin';
+            document.getElementById('admin-name').textContent = adminName;
+            
+            return true;
         }
 
         function logout() {

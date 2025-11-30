@@ -106,8 +106,8 @@ manager = ConnectionManager()
 
 @app.get("/")
 def root():
-    """Serve admin dashboard on root URL."""
-    static_file = os.path.join(os.path.dirname(__file__), "static", "admin.html")
+    """Serve admin login page on root URL."""
+    static_file = os.path.join(os.path.dirname(__file__), "static", "login.html")
     if os.path.exists(static_file):
         return FileResponse(static_file)
     return {
@@ -116,6 +116,15 @@ def root():
         "docs": "/docs",
         "admin": "/admin"
     }
+
+
+@app.get("/admin/login")
+def admin_login():
+    """Serve admin login page."""
+    static_file = os.path.join(os.path.dirname(__file__), "static", "login.html")
+    if os.path.exists(static_file):
+        return FileResponse(static_file)
+    return {"message": "Login page not found"}
 
 
 @app.get("/admin")
