@@ -1,10 +1,11 @@
 class AppConfig {
   // API Configuration
   // Change this URL when deploying to production
-  static const String apiBaseUrl = 'https://sathyabama-bus-tracker.onrender.com/api/v1';
-  
+  static const String apiBaseUrl = 'http://10.0.2.2:8000/api/v1'; // Android emulator
+  // For iOS simulator, use: 'http://localhost:8000/api/v1'
+  // For physical device, use your computer's IP: 'http://192.168.x.x:8000/api/v1'
   // For production/deployed backend, use:
-  // static const String apiBaseUrl = 'https://your-app.onrender.com/api/v1';
+  // static const String apiBaseUrl = 'https://sathyabama-bus-tracker.onrender.com/api/v1';
   
   // WebSocket URL for real-time updates
   static String get wsUrl {

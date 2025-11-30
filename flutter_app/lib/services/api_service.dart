@@ -32,12 +32,13 @@ class ApiService {
   }
 
   late final Dio _dio;
+  String? _currentBusNumber;
 
   // Authentication
   Future<LoginResponse> loginDriver(String phone, String password) async {
     try {
       final response = await _dio.post(
-        '/api/v1/auth/login',
+        '/auth/login',
         data: {
           'phone': phone,
           'password': password,
@@ -58,7 +59,7 @@ class ApiService {
   // Driver endpoints
   Future<DriverProfile> getDriverProfile() async {
     try {
-      final response = await _dio.get('/api/v1/driver/profile');
+      final response = await _dio.get('/driver/profile');
 
       if (response.statusCode == 200) {
         return DriverProfile.fromJson(response.data);
@@ -71,8 +72,9 @@ class ApiService {
 
   Future<void> startShift(String busNumber, String route) async {
     try {
+      _currentBusNumber = busNumber; // Store for location updates
       await _dio.post(
-        '/api/v1/driver/start-shift',
+        '/driver/start-shift',
         data: {
           'bus_number': busNumber,
           'route': route,
@@ -84,11 +86,18 @@ class ApiService {
   }
 
   Future<void> updateLocation(double lat, double lng, double speed) async {
+    if (_currentBusNumber == null) {
+      if (AppConfig.enableLogging) {
+        print('Cannot update location: No active bus number');
+      }
+      return;
+    }
+    
     try {
       await _dio.post(
-        '/api/v1/driver/location/update',
+        '/driver/location/update',
         data: {
-          'bus_number': 'BUS001', // TODO: Get from driver profile
+          'bus_number': _currentBusNumber,
           'latitude': lat,
           'longitude': lng,
           'speed': speed,
@@ -106,7 +115,8 @@ class ApiService {
 
   Future<void> endShift() async {
     try {
-      await _dio.post('/api/v1/driver/end-shift');
+      await _dio.post('/driver/end-shift');
+      _currentBusNumber = null; // Clear bus number
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -119,7 +129,7 @@ class ApiService {
   ) async {
     try {
       await _dio.post(
-        '/api/v1/driver/request-bus',
+        '/driver/request-bus',
         data: {
           'bus_number': busNumber,
           'route': route,
@@ -134,7 +144,7 @@ class ApiService {
   // Student endpoints
   Future<List<BusLocation>> getActiveBuses() async {
     try {
-      final response = await _dio.get('/api/v1/student/buses/active');
+      final response = await _dio.get('/student/buses/active');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['buses'] ?? [];
