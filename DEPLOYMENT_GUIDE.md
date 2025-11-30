@@ -76,7 +76,7 @@ flutter run -d chrome
      ```
    - **Start Command**:
      ```bash
-     cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+     cd backend && python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT
      ```
 
 4. **Environment Variables:**
