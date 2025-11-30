@@ -42,13 +42,18 @@ class DriverProfileResponse(BaseModel):
 
 
 @router.get("/profile", response_model=DriverProfileResponse)
-def get_driver_profile(current_driver: Driver = Depends(get_current_driver())):
+def get_driver_profile(
+    current_driver: Driver = Depends(get_current_driver()),
+    db: Session = Depends(get_db)
+):
     """Get current driver's profile with assigned bus and route."""
     
-    # Get driver's assigned bus route
-    bus_route = None
-    if hasattr(current_driver, 'routes') and current_driver.routes:
-        bus_route = current_driver.routes[0]
+    # Get driver's assigned bus route from database
+    from ..models.bus_route import BusRoute
+    bus_route = db.query(BusRoute).filter(
+        BusRoute.driver_id == current_driver.driver_id,
+        BusRoute.is_active == True
+    ).first()
     
     return DriverProfileResponse(
         driver_id=current_driver.driver_id,
