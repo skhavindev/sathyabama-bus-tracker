@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Sathyabama Bus Tracker</title>
+    <title>Sathyabama Bus Tracker - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -11,545 +15,1332 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            background: var(--gray-100);
+            color: var(--gray-900);
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
+        /* Header */
         .header {
             background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            padding: 1rem 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .header h1 {
-            color: #333;
-            font-size: 32px;
-            margin-bottom: 10px;
+            font-size: 1.5rem;
+            color: var(--primary-color);
         }
 
-        .header p {
-            color: #666;
-            font-size: 16px;
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
         }
 
-        .stats-grid {
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Stats Cards */
+        .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 1.5rem;
+            padding: 2rem;
         }
 
         .stat-card {
             background: white;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
         }
 
-        .stat-card h3 {
-            color: #666;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        .stat-card .number {
-            font-size: 36px;
-            font-weight: 700;
-            color: #667eea;
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
         }
 
-        .main-content {
+        .stat-card-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--gray-900);
+        }
+
+        .stat-card-label {
+            color: var(--gray-700);
+            font-size: 0.875rem;
+        }
+
+        /* Tabs */
+        .tabs-container {
             background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin: 0 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0 1rem;
         }
 
         .tab {
-            padding: 12px 24px;
-            background: none;
-            border: none;
+            padding: 1rem 1.5rem;
             cursor: pointer;
-            font-size: 16px;
-            color: #666;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            color: var(--gray-700);
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--primary-color);
         }
 
         .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
         }
 
-        .drivers-table {
+        .tab-content {
+            display: none;
+            padding: 2rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        .drivers-table th {
-            text-align: left;
-            padding: 15px;
-            background: #f8f9fa;
-            color: #333;
-            font-weight: 600;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .drivers-table td {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .drivers-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge.active {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .badge.pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .badge.admin {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s;
-            margin-right: 5px;
-        }
-
-        .btn-approve {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-approve:hover {
-            background: #218838;
-        }
-
-        .btn-reject {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-reject:hover {
-            background: #c82333;
-        }
-
-        .btn-delete {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-delete:hover {
-            background: #5a6268;
-        }
-
-        .login-form {
-            max-width: 400px;
-            margin: 100px auto;
             background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
 
-        .login-form h2 {
-            margin-bottom: 30px;
-            color: #333;
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
         }
 
+        th {
+            background: var(--gray-100);
+            font-weight: 600;
+            color: var(--gray-700);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: var(--gray-100);
+        }
+
+        .editable-cell {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .editable-cell:hover {
+            background: var(--gray-100);
+        }
+
+        .cell-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 2px solid var(--primary-color);
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        /* Status Badge */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            font-size: 1.25rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-700);
+        }
+
+        /* Form */
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #666;
+            margin-bottom: 0.5rem;
             font-weight: 500;
+            color: var(--gray-700);
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
         }
 
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        .btn-login {
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        /* Search */
+        .search-box {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-box input {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.375rem;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-700);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--gray-300);
+            background: white;
+            border-radius: 0.375rem;
             cursor: pointer;
-            transition: transform 0.3s;
         }
 
-        .btn-login:hover {
-            transform: translateY(-2px);
+        .pagination button:hover:not(:disabled) {
+            background: var(--gray-100);
         }
 
-        .error {
-            color: #dc3545;
-            margin-top: 10px;
-            font-size: 14px;
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        .hidden {
+        .pagination .page-info {
+            color: var(--gray-700);
+        }
+
+        /* Loading */
+        .loading {
             display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
         }
 
-        .logout-btn {
-            float: right;
-            padding: 10px 20px;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
+        .loading.active {
+            display: flex;
         }
 
-        .logout-btn:hover {
-            background: #c82333;
+        .spinner {
+            border: 4px solid var(--gray-200);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            z-index: 10000;
+            min-width: 300px;
+        }
+
+        .toast.active {
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast-success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast-error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+
+            .tabs-container {
+                margin: 0 1rem;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            .tab-content {
+                padding: 1rem;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .toolbar-actions {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Login Form -->
-    <div id="loginForm" class="login-form">
-        <h2>Admin Login</h2>
-        <form onsubmit="login(event)">
-            <div class="form-group">
-                <label>Phone Number</label>
-                <input type="tel" id="phone" required placeholder="+91 9876543210">
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="password" required>
-            </div>
-            <button type="submit" class="btn-login">Login</button>
-            <div id="loginError" class="error hidden"></div>
-        </form>
+    <!-- Loading Overlay -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
     </div>
 
-    <!-- Dashboard -->
-    <div id="dashboard" class="container hidden">
-        <div class="header">
-            <h1>Admin Dashboard</h1>
-            <p>Manage drivers and monitor the bus tracking system</p>
-            <button class="logout-btn" onclick="logout()">Logout</button>
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle" id="toast-icon"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1><i class="fas fa-bus"></i> Sathyabama Bus Tracker Admin</h1>
+        <div class="header-actions">
+            <span id="admin-name">Admin</span>
+            <button class="btn btn-danger btn-sm" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-container">
+        <div class="stat-card" onclick="switchTab('drivers')">
+            <div class="stat-card-header">
+                <div class="stat-card-icon" style="background: #dbeafe; color: var(--primary-color);">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+            <div class="stat-card-value" id="stat-total-drivers">0</div>
+            <div class="stat-card-label">Total Drivers</div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Total Drivers</h3>
-                <div class="number" id="totalDrivers">0</div>
+        <div class="stat-card" onclick="switchTab('drivers')">
+            <div class="stat-card-header">
+                <div class="stat-card-icon" style="background: #d1fae5; color: var(--success-color);">
+                    <i class="fas fa-user-check"></i>
+                </div>
             </div>
-            <div class="stat-card">
-                <h3>Active Drivers</h3>
-                <div class="number" id="activeDrivers">0</div>
+            <div class="stat-card-value" id="stat-active-drivers">0</div>
+            <div class="stat-card-label">Active Drivers</div>
+        </div>
+
+        <div class="stat-card" onclick="switchTab('routes')">
+            <div class="stat-card-header">
+                <div class="stat-card-icon" style="background: #fef3c7; color: var(--warning-color);">
+                    <i class="fas fa-route"></i>
+                </div>
             </div>
-            <div class="stat-card">
-                <h3>Pending Approval</h3>
-                <div class="number" id="pendingDrivers">0</div>
+            <div class="stat-card-value" id="stat-total-routes">0</div>
+            <div class="stat-card-label">Total Routes</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card-header">
+                <div class="stat-card-icon" style="background: #dcfce7; color: var(--success-color);">
+                    <i class="fas fa-bus-alt"></i>
+                </div>
             </div>
-            <div class="stat-card">
-                <h3>Admin Users</h3>
-                <div class="number" id="adminCount">0</div>
+            <div class="stat-card-value" id="stat-active-buses">0</div>
+            <div class="stat-card-label">Active Buses</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('drivers')">
+                <i class="fas fa-users"></i> Drivers
+            </div>
+            <div class="tab" onclick="switchTab('routes')">
+                <i class="fas fa-route"></i> Bus Routes
+            </div>
+            <div class="tab" onclick="switchTab('audit')">
+                <i class="fas fa-history"></i> Audit Log
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('all')">All Drivers</button>
-                <button class="tab" onclick="showTab('pending')">Pending Approval</button>
-                <button class="tab" onclick="showTab('active')">Active Drivers</button>
+        <!-- Drivers Tab -->
+        <div class="tab-content active" id="drivers-tab">
+            <div class="toolbar">
+                <div class="search-box" style="max-width: 400px;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="driver-search" placeholder="Search drivers..." onkeyup="searchDrivers()">
+                </div>
+                <button class="btn btn-primary" onclick="showAddDriverModal()">
+                    <i class="fas fa-plus"></i> Add Driver
+                </button>
             </div>
 
-            <table class="drivers-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Role</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="driversTableBody">
-                    <!-- Drivers will be loaded here -->
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Admin</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drivers-table-body">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="drivers-pagination">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Routes Tab -->
+        <div class="tab-content" id="routes-tab">
+            <div class="toolbar">
+                <div class="toolbar-actions">
+                    <button class="btn btn-primary" onclick="addNewRoute()">
+                        <i class="fas fa-plus"></i> Add Route
+                    </button>
+                    <button class="btn btn-secondary" onclick="showImportModal()">
+                        <i class="fas fa-file-import"></i> Import
+                    </button>
+                </div>
+                <div class="toolbar-actions">
+                    <button class="btn btn-success" onclick="exportRoutes('excel')">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button class="btn btn-danger" onclick="exportRoutes('pdf')">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="routes-table">
+                    <thead>
+                        <tr>
+                            <th>Sl.No</th>
+                            <th>Bus Route</th>
+                            <th>Route No</th>
+                            <th>Vehicle No</th>
+                            <th>Driver Name</th>
+                            <th>Phone Number</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routes-table-body">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Audit Log Tab -->
+        <div class="tab-content" id="audit-tab">
+            <div class="toolbar">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="form-group" style="margin: 0;">
+                        <select id="audit-action-filter" onchange="loadAuditLog()">
+                            <option value="">All Actions</option>
+                            <option value="CREATE">Create</option>
+                            <option value="UPDATE">Update</option>
+                            <option value="DELETE">Delete</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Admin</th>
+                            <th>Action</th>
+                            <th>Entity</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table-body">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="audit-pagination">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Driver Modal -->
+    <div class="modal" id="driver-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="driver-modal-title">Add Driver</h2>
+                <button class="close-btn" onclick="closeDriverModal()">&times;</button>
+            </div>
+            <form id="driver-form" onsubmit="saveDriver(event)">
+                <input type="hidden" id="driver-id">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="driver-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone *</label>
+                    <input type="tel" id="driver-phone" pattern="^\+91[0-9]{10}$" placeholder="+919876543210" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="driver-email">
+                </div>
+                <div class="form-group">
+                    <label>Password <span id="password-optional">(leave blank to keep current)</span></label>
+                    <input type="password" id="driver-password" minlength="6">
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="driver-is-admin">
+                        <label for="driver-is-admin">Is Admin</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="driver-is-active" checked>
+                        <label for="driver-is-active">Is Active</label>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeDriverModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import Routes Modal -->
+    <div class="modal" id="import-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import Bus Routes</h2>
+                <button class="close-btn" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Select Excel or CSV file</label>
+                <input type="file" id="import-file" accept=".xlsx,.xls,.csv">
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="importRoutes()">Import</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const API_BASE = window.location.origin + '/api/v1';
-        let authToken = localStorage.getItem('adminToken');
-        let currentFilter = 'all';
+        // Configuration
+        const API_BASE = '/api/admin';
+        let currentDriverPage = 1;
+        let currentAuditPage = 1;
+        let driverSearchTerm = '';
+        let editingCell = null;
 
-        // Check if already logged in
-        if (authToken) {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            loadDashboard();
-        }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadStatistics();
+            loadDrivers();
+            loadRoutes();
+            loadAuditLog();
+            
+            // Auto-refresh statistics every 30 seconds
+            setInterval(loadStatistics, 30000);
+        });
 
-        async function login(event) {
-            event.preventDefault();
-            const phone = document.getElementById('phone').value;
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('loginError');
-
-            try {
-                const response = await fetch(`${API_BASE}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    if (!data.driver.is_admin) {
-                        errorDiv.textContent = 'Admin access required';
-                        errorDiv.classList.remove('hidden');
-                        return;
-                    }
-
-                    authToken = data.access_token;
-                    localStorage.setItem('adminToken', authToken);
-                    document.getElementById('loginForm').classList.add('hidden');
-                    document.getElementById('dashboard').classList.remove('hidden');
-                    loadDashboard();
-                } else {
-                    errorDiv.textContent = data.detail || 'Login failed';
-                    errorDiv.classList.remove('hidden');
-                }
-            } catch (error) {
-                errorDiv.textContent = 'Connection error. Please try again.';
-                errorDiv.classList.remove('hidden');
+        // Authentication
+        function checkAuth() {
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                window.location.href = '/admin/login';
+                return;
             }
         }
 
         function logout() {
-            localStorage.removeItem('adminToken');
-            authToken = null;
-            document.getElementById('dashboard').classList.add('hidden');
-            document.getElementById('loginForm').classList.remove('hidden');
+            localStorage.removeItem('admin_token');
+            window.location.href = '/admin/login';
         }
 
-        async function loadDashboard() {
-            await loadStats();
-            await loadDrivers(currentFilter);
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+                'Content-Type': 'application/json'
+            };
         }
 
-        async function loadStats() {
+        // UI Helpers
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const messageEl = document.getElementById('toast-message');
+            
+            toast.className = `toast active toast-${type}`;
+            icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            messageEl.textContent = message;
+            
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 3000);
+        }
+
+        function switchTab(tabName) {
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.closest('.tab').classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        // Statistics
+        async function loadStatistics() {
             try {
-                const response = await fetch(`${API_BASE}/admin/stats`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                const response = await fetch(`${API_BASE}/statistics`, {
+                    headers: getAuthHeaders()
                 });
-
+                
                 if (response.ok) {
-                    const stats = await response.json();
-                    document.getElementById('totalDrivers').textContent = stats.total_drivers;
-                    document.getElementById('activeDrivers').textContent = stats.active_drivers;
-                    document.getElementById('pendingDrivers').textContent = stats.pending_drivers;
-                    document.getElementById('adminCount').textContent = stats.admin_count;
+                    const data = await response.json();
+                    document.getElementById('stat-total-drivers').textContent = data.total_drivers;
+                    document.getElementById('stat-active-drivers').textContent = data.active_drivers;
+                    document.getElementById('stat-total-routes').textContent = data.total_routes;
+                    document.getElementById('stat-active-buses').textContent = data.active_buses;
                 }
             } catch (error) {
-                console.error('Error loading stats:', error);
+                console.error('Error loading statistics:', error);
             }
         }
 
-        async function loadDrivers(filter = 'all') {
+        // Drivers Management
+        async function loadDrivers(page = 1) {
+            showLoading();
             try {
-                let url = `${API_BASE}/admin/drivers`;
-                if (filter !== 'all') {
-                    url += `?status_filter=${filter}`;
-                }
-
-                const response = await fetch(url, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                const response = await fetch(`${API_BASE}/drivers?page=${page}&per_page=10&search=${driverSearchTerm}`, {
+                    headers: getAuthHeaders()
                 });
-
+                
                 if (response.ok) {
-                    const drivers = await response.json();
-                    renderDrivers(drivers);
+                    const data = await response.json();
+                    renderDriversTable(data.drivers);
+                    renderDriversPagination(data.page, data.pages, data.total);
+                    currentDriverPage = page;
                 }
             } catch (error) {
-                console.error('Error loading drivers:', error);
+                showToast('Error loading drivers', 'error');
+            } finally {
+                hideLoading();
             }
         }
 
-        function renderDrivers(drivers) {
-            const tbody = document.getElementById('driversTableBody');
-            tbody.innerHTML = '';
-
-            drivers.forEach(driver => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${driver.driver_id}</td>
+        function renderDriversTable(drivers) {
+            const tbody = document.getElementById('drivers-table-body');
+            tbody.innerHTML = drivers.map(driver => `
+                <tr>
                     <td>${driver.name}</td>
                     <td>${driver.phone}</td>
-                    <td>${driver.email || 'N/A'}</td>
+                    <td>${driver.email || '-'}</td>
                     <td>
-                        <span class="badge ${driver.is_active ? 'active' : 'pending'}">
-                            ${driver.is_active ? 'Active' : 'Pending'}
+                        <span class="badge ${driver.is_active ? 'badge-success' : 'badge-danger'}">
+                            ${driver.is_active ? 'Active' : 'Inactive'}
                         </span>
                     </td>
+                    <td>${driver.is_admin ? '<i class="fas fa-check text-success"></i>' : '-'}</td>
                     <td>
-                        ${driver.is_admin ? '<span class="badge admin">Admin</span>' : 'Driver'}
+                        <button class="btn btn-sm btn-primary" onclick="editDriver(${driver.driver_id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteDriver(${driver.driver_id}, '${driver.name}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
-                    <td>
-                        ${!driver.is_active ? `
-                            <button class="btn btn-approve" onclick="approveDriver(${driver.driver_id})">
-                                Approve
-                            </button>
-                        ` : `
-                            <button class="btn btn-reject" onclick="rejectDriver(${driver.driver_id})">
-                                Deactivate
-                            </button>
-                        `}
-                        ${!driver.is_admin ? `
-                            <button class="btn btn-delete" onclick="deleteDriver(${driver.driver_id})">
-                                Delete
-                            </button>
-                        ` : ''}
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
+                </tr>
+            `).join('');
         }
 
-        async function approveDriver(driverId) {
-            if (!confirm('Approve this driver?')) return;
+        function renderDriversPagination(page, pages, total) {
+            const pagination = document.getElementById('drivers-pagination');
+            pagination.innerHTML = `
+                <button onclick="loadDrivers(${page - 1})" ${page === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="page-info">Page ${page} of ${pages} (${total} total)</span>
+                <button onclick="loadDrivers(${page + 1})" ${page === pages ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+        }
 
+        function searchDrivers() {
+            driverSearchTerm = document.getElementById('driver-search').value;
+            loadDrivers(1);
+        }
+
+        function showAddDriverModal() {
+            document.getElementById('driver-modal-title').textContent = 'Add Driver';
+            document.getElementById('driver-form').reset();
+            document.getElementById('driver-id').value = '';
+            document.getElementById('password-optional').style.display = 'none';
+            document.getElementById('driver-password').required = true;
+            document.getElementById('driver-modal').classList.add('active');
+        }
+
+        async function editDriver(driverId) {
+            showLoading();
             try {
-                const response = await fetch(`${API_BASE}/admin/drivers/${driverId}/approve`, {
-                    method: 'PATCH',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                const response = await fetch(`${API_BASE}/drivers/${driverId}`, {
+                    headers: getAuthHeaders()
                 });
-
+                
                 if (response.ok) {
-                    alert('Driver approved successfully');
-                    loadDashboard();
+                    const driver = await response.json();
+                    document.getElementById('driver-modal-title').textContent = 'Edit Driver';
+                    document.getElementById('driver-id').value = driver.driver_id;
+                    document.getElementById('driver-name').value = driver.name;
+                    document.getElementById('driver-phone').value = driver.phone;
+                    document.getElementById('driver-email').value = driver.email || '';
+                    document.getElementById('driver-password').value = '';
+                    document.getElementById('driver-password').required = false;
+                    document.getElementById('driver-is-admin').checked = driver.is_admin;
+                    document.getElementById('driver-is-active').checked = driver.is_active;
+                    document.getElementById('password-optional').style.display = 'inline';
+                    document.getElementById('driver-modal').classList.add('active');
                 }
             } catch (error) {
-                alert('Error approving driver');
+                showToast('Error loading driver', 'error');
+            } finally {
+                hideLoading();
             }
         }
 
-        async function rejectDriver(driverId) {
-            if (!confirm('Deactivate this driver?')) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/admin/drivers/${driverId}/reject`, {
-                    method: 'PATCH',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-
-                if (response.ok) {
-                    alert('Driver deactivated');
-                    loadDashboard();
-                }
-            } catch (error) {
-                alert('Error deactivating driver');
-            }
-        }
-
-        async function deleteDriver(driverId) {
-            if (!confirm('Permanently delete this driver? This cannot be undone.')) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/admin/drivers/${driverId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-
-                if (response.ok) {
-                    alert('Driver deleted successfully');
-                    loadDashboard();
-                }
-            } catch (error) {
-                alert('Error deleting driver');
-            }
-        }
-
-        function showTab(filter) {
-            currentFilter = filter;
+        async function saveDriver(event) {
+            event.preventDefault();
+            showLoading();
             
-            // Update tab styles
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-
-            // Load drivers with filter
-            loadDrivers(filter);
+            const driverId = document.getElementById('driver-id').value;
+            const data = {
+                name: document.getElementById('driver-name').value,
+                phone: document.getElementById('driver-phone').value,
+                email: document.getElementById('driver-email').value || null,
+                is_admin: document.getElementById('driver-is-admin').checked,
+                is_active: document.getElementById('driver-is-active').checked
+            };
+            
+            const password = document.getElementById('driver-password').value;
+            if (password) {
+                data.password = password;
+            }
+            
+            try {
+                const url = driverId ? `${API_BASE}/drivers/${driverId}` : `${API_BASE}/drivers`;
+                const method = driverId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    showToast(`Driver ${driverId ? 'updated' : 'created'} successfully`);
+                    closeDriverModal();
+                    loadDrivers(currentDriverPage);
+                    loadStatistics();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Error saving driver', 'error');
+                }
+            } catch (error) {
+                showToast('Error saving driver', 'error');
+            } finally {
+                hideLoading();
+            }
         }
 
-        // Auto-refresh every 30 seconds
-        setInterval(() => {
-            if (authToken) {
-                loadDashboard();
+        async function deleteDriver(driverId, driverName) {
+            if (!confirm(`Are you sure you want to delete driver "${driverName}"?`)) {
+                return;
             }
-        }, 30000);
+            
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/drivers/${driverId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    showToast('Driver deleted successfully');
+                    loadDrivers(currentDriverPage);
+                    loadStatistics();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Error deleting driver', 'error');
+                }
+            } catch (error) {
+                showToast('Error deleting driver', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function closeDriverModal() {
+            document.getElementById('driver-modal').classList.remove('active');
+        }
+
+        // Routes Management
+        async function loadRoutes() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/routes`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const routes = await response.json();
+                    renderRoutesTable(routes);
+                }
+            } catch (error) {
+                showToast('Error loading routes', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderRoutesTable(routes) {
+            const tbody = document.getElementById('routes-table-body');
+            tbody.innerHTML = routes.map(route => `
+                <tr data-route-id="${route.route_id}">
+                    <td class="editable-cell" data-field="sl_no" ondblclick="editCell(this)">${route.sl_no}</td>
+                    <td class="editable-cell" data-field="bus_route" ondblclick="editCell(this)">${route.bus_route}</td>
+                    <td class="editable-cell" data-field="route_no" ondblclick="editCell(this)">${route.route_no}</td>
+                    <td class="editable-cell" data-field="vehicle_no" ondblclick="editCell(this)">${route.vehicle_no}</td>
+                    <td class="editable-cell" data-field="driver_name" ondblclick="editCell(this)">${route.driver_name}</td>
+                    <td class="editable-cell" data-field="phone_number" ondblclick="editCell(this)">${route.phone_number}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteRoute(${route.route_id}, '${route.route_no}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editCell(cell) {
+            if (editingCell) {
+                saveCell(editingCell);
+            }
+            
+            editingCell = cell;
+            const currentValue = cell.textContent;
+            const field = cell.dataset.field;
+            
+            if (field === 'bus_route') {
+                cell.innerHTML = `<textarea class="cell-input" rows="2">${currentValue}</textarea>`;
+            } else {
+                cell.innerHTML = `<input type="text" class="cell-input" value="${currentValue}">`;
+            }
+            
+            const input = cell.querySelector('.cell-input');
+            input.focus();
+            input.select();
+            
+            input.addEventListener('blur', () => saveCell(cell));
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    saveCell(cell);
+                } else if (e.key === 'Escape') {
+                    cell.textContent = currentValue;
+                    editingCell = null;
+                }
+            });
+        }
+
+        async function saveCell(cell) {
+            const input = cell.querySelector('.cell-input');
+            if (!input) return;
+            
+            const newValue = input.value.trim();
+            const field = cell.dataset.field;
+            const row = cell.closest('tr');
+            const routeId = row.dataset.routeId;
+            
+            if (!newValue) {
+                showToast('Value cannot be empty', 'error');
+                cell.textContent = input.defaultValue || '';
+                editingCell = null;
+                return;
+            }
+            
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/routes/${routeId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ [field]: newValue })
+                });
+                
+                if (response.ok) {
+                    cell.textContent = newValue;
+                    showToast('Route updated successfully');
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Error updating route', 'error');
+                    cell.textContent = input.defaultValue || '';
+                }
+            } catch (error) {
+                showToast('Error updating route', 'error');
+                cell.textContent = input.defaultValue || '';
+            } finally {
+                hideLoading();
+                editingCell = null;
+            }
+        }
+
+        async function addNewRoute() {
+            const newRoute = {
+                bus_route: 'New Route',
+                route_no: 'XX',
+                vehicle_no: 'XXXX',
+                driver_name: 'Driver Name',
+                phone_number: '0000000000',
+                is_active: true
+            };
+            
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/routes`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(newRoute)
+                });
+                
+                if (response.ok) {
+                    showToast('New route added. Double-click cells to edit.');
+                    loadRoutes();
+                    loadStatistics();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Error adding route', 'error');
+                }
+            } catch (error) {
+                showToast('Error adding route', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function deleteRoute(routeId, routeNo) {
+            if (!confirm(`Are you sure you want to delete route "${routeNo}"?`)) {
+                return;
+            }
+            
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/routes/${routeId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    showToast('Route deleted successfully');
+                    loadRoutes();
+                    loadStatistics();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Error deleting route', 'error');
+                }
+            } catch (error) {
+                showToast('Error deleting route', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Import/Export
+        function showImportModal() {
+            document.getElementById('import-modal').classList.add('active');
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').classList.remove('active');
+        }
+
+        async function importRoutes() {
+            const fileInput = document.getElementById('import-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showToast('Please select a file', 'error');
+                return;
+            }
+            
+            showLoading();
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_BASE}/routes/import`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+                    },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast(`Import complete: ${result.imported} imported, ${result.failed} failed`);
+                    closeImportModal();
+                    loadRoutes();
+                    loadStatistics();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || 'Error importing routes', 'error');
+                }
+            } catch (error) {
+                showToast('Error importing routes', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function exportRoutes(format) {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/routes/export?format=${format}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `bus_routes_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showToast(`Routes exported as ${format.toUpperCase()}`);
+                } else {
+                    showToast('Error exporting routes', 'error');
+                }
+            } catch (error) {
+                showToast('Error exporting routes', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Audit Log
+        async function loadAuditLog(page = 1) {
+            showLoading();
+            const actionFilter = document.getElementById('audit-action-filter').value;
+            
+            try {
+                let url = `${API_BASE}/audit-log?page=${page}&per_page=50`;
+                if (actionFilter) {
+                    url += `&action_type=${actionFilter}`;
+                }
+                
+                const response = await fetch(url, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderAuditTable(data.logs);
+                    renderAuditPagination(data.page, data.pages, data.total);
+                    currentAuditPage = page;
+                }
+            } catch (error) {
+                showToast('Error loading audit log', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderAuditTable(logs) {
+            const tbody = document.getElementById('audit-table-body');
+            tbody.innerHTML = logs.map(log => {
+                const actionColor = log.action_type === 'CREATE' ? 'success' : 
+                                   log.action_type === 'UPDATE' ? 'primary' : 'danger';
+                return `
+                    <tr>
+                        <td>${new Date(log.created_at).toLocaleString()}</td>
+                        <td>${log.admin_name}</td>
+                        <td><span class="badge badge-${actionColor}">${log.action_type}</span></td>
+                        <td>${log.entity_type} #${log.entity_id}</td>
+                        <td>${log.changes ? JSON.stringify(log.changes).substring(0, 100) + '...' : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderAuditPagination(page, pages, total) {
+            const pagination = document.getElementById('audit-pagination');
+            pagination.innerHTML = `
+                <button onclick="loadAuditLog(${page - 1})" ${page === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="page-info">Page ${page} of ${pages} (${total} total)</span>
+                <button onclick="loadAuditLog(${page + 1})" ${page === pages ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+        }
     </script>
 </body>
 </html>
