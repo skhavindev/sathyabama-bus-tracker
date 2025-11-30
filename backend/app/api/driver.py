@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/driver", tags=["Driver"])
 
 
 @router.get("/profile")
-def get_driver_profile(current_driver: Driver = Depends(get_current_driver)):
+def get_driver_profile(current_driver: Driver = Depends(get_current_driver())):
     """Get current driver's profile."""
     from ..schemas.driver import DriverResponse
     return DriverResponse.from_orm(current_driver)
