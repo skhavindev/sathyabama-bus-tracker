@@ -85,11 +85,60 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   Future<void> _loadBuses() async {
     try {
-      final buses = await ApiService().getActiveBuses();
+      // Get active buses for map display (buses currently sharing location)
+      final activeBuses = await ApiService().getActiveBuses();
+      
+      // Get all routes from database
+      final allRoutes = await ApiService().getAllRoutes();
+      
+      // Convert all routes to BusLocation format
+      final allBuses = allRoutes.map((route) {
+        final busNumber = route['busNumber'] ?? '';
+        final isSharingLocation = route['isSharingLocation'] == true;
+        
+        // Check if this bus is currently active (sharing location)
+        final activeBus = activeBuses.firstWhere(
+          (b) => b.busNumber == busNumber,
+          orElse: () => BusLocation(
+            busNumber: '',
+            route: '',
+            latitude: 0,
+            longitude: 0,
+            speed: 0,
+            lastUpdate: DateTime.now(),
+            status: 'offline',
+          ),
+        );
+        
+        // If bus is actively sharing location, use its real data
+        if (activeBus.busNumber.isNotEmpty && isSharingLocation) {
+          return BusLocation(
+            busNumber: busNumber,
+            route: route['routeName'] ?? '',
+            latitude: activeBus.latitude,
+            longitude: activeBus.longitude,
+            speed: activeBus.speed,
+            lastUpdate: activeBus.lastUpdate,
+            status: 'active',
+          );
+        } else {
+          // Bus exists in database but not sharing location
+          return BusLocation(
+            busNumber: busNumber,
+            route: route['routeName'] ?? '',
+            latitude: 12.9716, // Default location (won't show on map)
+            longitude: 80.2476,
+            speed: 0,
+            lastUpdate: DateTime.now(),
+            status: 'offline',
+          );
+        }
+      }).toList();
+      
       if (mounted) {
         setState(() {
-          _activeBuses = buses;
-          _filteredBuses = buses;
+          _activeBuses = allBuses;
+          _filteredBuses = allBuses;
         });
       }
     } catch (e) {
@@ -379,8 +428,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       ),
                     ),
                   ),
-                  // Bus markers
-                  ..._filteredBuses.map((bus) {
+                  // Bus markers - only show buses that are actively sharing location
+                  ..._filteredBuses.where((bus) => bus.status == 'active').map((bus) {
                     final isTracked =
                         _trackedBuses.any((t) => t.busNumber == bus.busNumber);
                     return Marker(
@@ -692,10 +741,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             AppleColors.goldAccentGradient.createShader(bounds),
                         child: Text(
                           'S Khavin',
-                          style: GoogleFonts.whisper(
+                          style: GoogleFonts.dancingScript(
                             color: AppleColors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w400,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -1105,6 +1154,8 @@ class _RoutesMenuContentState extends State<_RoutesMenuContent> {
                       final bus = _filteredRoutes[index];
                       final isTracked = widget.trackedBuses
                           .any((t) => t.busNumber == bus.busNumber);
+                      final isSharing = bus.status == 'active';
+                      
                       return PremiumCard(
                         padding: const EdgeInsets.all(AppleSpacing.base),
                         onTap: () => widget.onBusTap(bus),
@@ -1117,11 +1168,16 @@ class _RoutesMenuContentState extends State<_RoutesMenuContent> {
                                   width: 44,
                                   height: 44,
                                   decoration: BoxDecoration(
-                                    gradient: AppleColors.redGradient,
+                                    gradient: isSharing 
+                                        ? AppleColors.redGradient
+                                        : const LinearGradient(
+                                            colors: [AppleColors.systemGray3, AppleColors.systemGray],
+                                          ),
                                     borderRadius: AppleRadius.smAll,
                                     border: Border.all(
-                                      color: AppleColors.accentGold
-                                          .withValues(alpha: 0.3),
+                                      color: isSharing
+                                          ? AppleColors.accentGold.withValues(alpha: 0.3)
+                                          : AppleColors.systemGray.withValues(alpha: 0.3),
                                       width: 2,
                                     ),
                                   ),
@@ -1143,9 +1199,30 @@ class _RoutesMenuContentState extends State<_RoutesMenuContent> {
                                     children: [
                                       Text(bus.route,
                                           style: AppleTypography.headline),
-                                      Text(
-                                        '${bus.speed.toStringAsFixed(0)} km/h • ${bus.status}',
-                                        style: AppleTypography.caption1,
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: isSharing 
+                                                  ? AppleColors.success 
+                                                  : AppleColors.systemGray,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: AppleSpacing.xs),
+                                          Text(
+                                            isSharing 
+                                                ? 'Sharing Location • ${bus.speed.toStringAsFixed(0)} km/h'
+                                                : 'Not Sharing Location',
+                                            style: AppleTypography.caption1.copyWith(
+                                              color: isSharing 
+                                                  ? AppleColors.success 
+                                                  : AppleColors.systemGray,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

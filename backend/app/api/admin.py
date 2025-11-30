@@ -298,25 +298,42 @@ def create_route(
     
     # Try to find driver by phone number to auto-link
     driver_id = route_data.driver_id
+    driver_link_message = None
+    
     if not driver_id and route_data.phone_number:
+        print(f"🔍 Searching for driver with phone: {route_data.phone_number}")
+        
+        # Get all drivers to debug
+        all_drivers = db.query(Driver).all()
+        print(f"📋 Total drivers in database: {len(all_drivers)}")
+        for d in all_drivers:
+            print(f"   - {d.name}: {d.phone}")
+        
         # Try exact match first
         driver = db.query(Driver).filter(Driver.phone == route_data.phone_number).first()
         
-        # If not found, try without country code
+        # If not found, try without country code and various formats
         if not driver:
             # Remove +91 or +919 prefix and try again
-            phone_clean = route_data.phone_number.replace('+91', '').replace('+', '').strip()
+            phone_clean = route_data.phone_number.replace('+91', '').replace('+', '').replace('-', '').replace(' ', '').strip()
+            print(f"🔍 Trying cleaned phone: {phone_clean}")
+            
             driver = db.query(Driver).filter(
                 or_(
                     Driver.phone == route_data.phone_number,
                     Driver.phone.like(f'%{phone_clean}'),
-                    Driver.phone == f'+91{phone_clean}'
+                    Driver.phone == f'+91{phone_clean}',
+                    Driver.phone == phone_clean
                 )
             ).first()
         
         if driver:
             driver_id = driver.driver_id
-            print(f"✅ Auto-linked driver {driver.name} (ID: {driver_id}) to route {route_data.vehicle_no}")
+            driver_link_message = f"✅ Successfully linked to driver: {driver.name} (Phone: {driver.phone})"
+            print(driver_link_message)
+        else:
+            driver_link_message = f"⚠️ No driver found with phone number: {route_data.phone_number}. Route created without driver link."
+            print(driver_link_message)
     
     # Create route
     new_route = BusRoute(
@@ -334,11 +351,27 @@ def create_route(
     db.commit()
     db.refresh(new_route)
     
-    # Create audit log
+    # Create audit log with driver link info
     create_audit_log(
         db, current_admin.driver_id, "CREATE", "route", new_route.route_id,
-        {"route_no": new_route.route_no, "vehicle_no": new_route.vehicle_no, "driver_id": driver_id}
+        {
+            "route_no": new_route.route_no, 
+            "vehicle_no": new_route.vehicle_no, 
+            "driver_id": driver_id,
+            "driver_link_status": driver_link_message
+        }
     )
+    
+    # Add debug message to response (will show in browser console/network tab)
+    if driver_link_message:
+        print(f"\n{'='*60}")
+        print(f"ROUTE CREATION DEBUG")
+        print(f"{'='*60}")
+        print(f"Route: {route_data.route_no} - {route_data.bus_route}")
+        print(f"Vehicle: {route_data.vehicle_no}")
+        print(f"Phone Number: {route_data.phone_number}")
+        print(driver_link_message)
+        print(f"{'='*60}\n")
     
     return new_route
 
