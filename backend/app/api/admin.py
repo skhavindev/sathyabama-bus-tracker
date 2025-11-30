@@ -299,9 +299,24 @@ def create_route(
     # Try to find driver by phone number to auto-link
     driver_id = route_data.driver_id
     if not driver_id and route_data.phone_number:
+        # Try exact match first
         driver = db.query(Driver).filter(Driver.phone == route_data.phone_number).first()
+        
+        # If not found, try without country code
+        if not driver:
+            # Remove +91 or +919 prefix and try again
+            phone_clean = route_data.phone_number.replace('+91', '').replace('+', '').strip()
+            driver = db.query(Driver).filter(
+                or_(
+                    Driver.phone == route_data.phone_number,
+                    Driver.phone.like(f'%{phone_clean}'),
+                    Driver.phone == f'+91{phone_clean}'
+                )
+            ).first()
+        
         if driver:
             driver_id = driver.driver_id
+            print(f"✅ Auto-linked driver {driver.name} (ID: {driver_id}) to route {route_data.vehicle_no}")
     
     # Create route
     new_route = BusRoute(
