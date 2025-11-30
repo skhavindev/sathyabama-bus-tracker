@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .config import settings
-from .database import Base, engine
+from .database import Base, engine, get_db
 from .api import auth, driver, student, routes, buses, admin
 import json
 from typing import Set
 from .services.cache_service import CacheService
+from .services.auth_service import hash_password
+from .models.driver import Driver
 import os
 
 # Create database tables
@@ -19,6 +21,37 @@ app = FastAPI(
     description="Real-time bus tracking system for Sathyabama University",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+async def create_admin_user():
+    """Create default admin user on startup if it doesn't exist."""
+    db = next(get_db())
+    try:
+        # Check if admin user already exists
+        admin_phone = "+919876543210"
+        existing_admin = db.query(Driver).filter(Driver.phone == admin_phone).first()
+        
+        if not existing_admin:
+            # Create admin user
+            admin_user = Driver(
+                name="Admin",
+                phone=admin_phone,
+                email="admin@sathyabama.edu",
+                hashed_password=hash_password("admin"),
+                is_active=True,
+                is_admin=True
+            )
+            db.add(admin_user)
+            db.commit()
+            print(f"✅ Admin user created: {admin_phone} / password: admin")
+        else:
+            print(f"✅ Admin user already exists: {admin_phone}")
+    except Exception as e:
+        print(f"❌ Error creating admin user: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 # CORS middleware
 app.add_middleware(
