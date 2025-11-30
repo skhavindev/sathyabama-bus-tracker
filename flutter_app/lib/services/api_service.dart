@@ -39,7 +39,7 @@ class ApiService {
       final response = await _dio.post(
         '/auth/login',
         data: {
-          'phone_number': phone,
+          'phone': phone,
           'password': password,
         },
       );
