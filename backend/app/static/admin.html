@@ -1157,12 +1157,122 @@
         }
 
         async function addNewRoute() {
+            // Show modal to select driver
+            await showAddRouteModal();
+        }
+
+        async function showAddRouteModal() {
+            // Load all drivers first
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/drivers?page=1&per_page=1000`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load drivers');
+                }
+                
+                const data = await response.json();
+                const drivers = data.drivers;
+                
+                // Create modal HTML
+                const modalHTML = `
+                    <div class="modal active" id="add-route-modal" style="display: flex;">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2>Add New Route</h2>
+                                <button class="close-btn" onclick="closeAddRouteModal()">&times;</button>
+                            </div>
+                            <form id="add-route-form" onsubmit="submitNewRoute(event)">
+                                <div class="form-group">
+                                    <label>Bus Route *</label>
+                                    <textarea id="new-bus-route" rows="2" required placeholder="e.g., Tambaram - Sathyabama"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Route No *</label>
+                                    <input type="text" id="new-route-no" required placeholder="e.g., R1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Vehicle No *</label>
+                                    <input type="text" id="new-vehicle-no" required placeholder="e.g., TN01AB1234">
+                                </div>
+                                <div class="form-group">
+                                    <label>Select Driver (Optional)</label>
+                                    <select id="new-driver-select" onchange="updateDriverInfo()">
+                                        <option value="">-- No Driver (Manual Entry) --</option>
+                                        ${drivers.map(d => `
+                                            <option value="${d.driver_id}" data-name="${d.name}" data-phone="${d.phone}">
+                                                ${d.name} (${d.phone})
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Driver Name *</label>
+                                    <input type="text" id="new-driver-name" required placeholder="Driver Name">
+                                </div>
+                                <div class="form-group">
+                                    <label>Phone Number *</label>
+                                    <input type="tel" id="new-phone-number" required placeholder="+919876543210">
+                                </div>
+                                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                                    <button type="button" class="btn btn-secondary" onclick="closeAddRouteModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Add Route</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove existing modal if any
+                const existingModal = document.getElementById('add-route-modal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add modal to body
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                
+            } catch (error) {
+                showToast('Error loading drivers', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function updateDriverInfo() {
+            const select = document.getElementById('new-driver-select');
+            const selectedOption = select.options[select.selectedIndex];
+            
+            if (select.value) {
+                const driverName = selectedOption.getAttribute('data-name');
+                const driverPhone = selectedOption.getAttribute('data-phone');
+                
+                document.getElementById('new-driver-name').value = driverName;
+                document.getElementById('new-phone-number').value = driverPhone;
+            } else {
+                document.getElementById('new-driver-name').value = '';
+                document.getElementById('new-phone-number').value = '';
+            }
+        }
+
+        function closeAddRouteModal() {
+            const modal = document.getElementById('add-route-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function submitNewRoute(event) {
+            event.preventDefault();
+            
             const newRoute = {
-                bus_route: 'New Route',
-                route_no: 'XX',
-                vehicle_no: 'XXXX',
-                driver_name: 'Driver Name',
-                phone_number: '0000000000',
+                bus_route: document.getElementById('new-bus-route').value,
+                route_no: document.getElementById('new-route-no').value,
+                vehicle_no: document.getElementById('new-vehicle-no').value,
+                driver_name: document.getElementById('new-driver-name').value,
+                phone_number: document.getElementById('new-phone-number').value,
                 is_active: true
             };
             
@@ -1175,7 +1285,8 @@
                 });
                 
                 if (response.ok) {
-                    showToast('New route added. Double-click cells to edit.');
+                    showToast('Route added successfully!');
+                    closeAddRouteModal();
                     loadRoutes();
                     loadStatistics();
                 } else {

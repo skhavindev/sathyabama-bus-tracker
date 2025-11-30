@@ -16,6 +16,7 @@ import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../models/bus_location.dart';
 import '../../models/tracked_bus.dart';
+import '../../models/pinned_bus.dart';
 import '../settings_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
@@ -29,6 +30,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
   List<TrackedBus> _trackedBuses = [];
+  List<PinnedBus> _pinnedBuses = [];
   String? _followingBus;
   String _userName = 'Student';
   final StorageService _storageService = StorageService();
@@ -38,6 +40,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Timer? _proximityTimer;
   Position? _currentPosition;
   final Set<String> _notifiedBuses = {};
+  final Set<String> _nearNotifiedBuses = {};
 
   static const double defaultLatitude = 12.9716;
   static const double defaultLongitude = 80.2476;
@@ -54,6 +57,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     _initializeServices();
     _loadBuses();
     _loadTrackedBuses();
+    _loadPinnedBuses();
     _getCurrentLocation();
     _loadUserProfile();
     _startAutoRefresh();
@@ -155,6 +159,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     setState(() => _trackedBuses = buses);
   }
 
+  Future<void> _loadPinnedBuses() async {
+    final buses = await _storageService.getPinnedBuses();
+    setState(() => _pinnedBuses = buses);
+  }
+
   void _startAutoRefresh() {
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       _loadBuses();
@@ -166,6 +175,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       _currentPosition = await LocationService().getCurrentPosition();
       if (_currentPosition == null) return;
 
+      // Check tracked buses for proximity notifications
       for (final trackedBus in _trackedBuses) {
         final bus = _activeBuses.firstWhere(
           (b) => b.busNumber == trackedBus.busNumber,
@@ -180,7 +190,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
         );
 
-        if (bus.busNumber.isNotEmpty) {
+        // Only process if bus is found and actively sharing location
+        if (bus.busNumber.isNotEmpty && bus.status == 'active') {
           final distance = _calculateDistance(
             _currentPosition!.latitude,
             _currentPosition!.longitude,
@@ -188,6 +199,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             bus.longitude,
           );
 
+          // Proximity notification (within custom radius)
           if (distance <= trackedBus.radiusMeters &&
               !_notifiedBuses.contains(bus.busNumber)) {
             await NotificationService().showBusProximityNotification(
@@ -198,6 +210,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           } else if (distance > trackedBus.radiusMeters) {
             _notifiedBuses.remove(bus.busNumber);
           }
+        } else {
+          // Bus is offline, clear notification states
+          _notifiedBuses.remove(bus.busNumber);
+          _nearNotifiedBuses.remove(bus.busNumber);
         }
       }
     });
@@ -260,6 +276,66 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     'Tracking Bus $busNumber - will notify within ${radius}m')),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _toggleBusPin(String busNumber, String routeName) async {
+    final isPinned = _pinnedBuses.any((b) => b.busNumber == busNumber);
+
+    if (isPinned) {
+      await _storageService.removePinnedBus(busNumber);
+      setState(() => _pinnedBuses.removeWhere((b) => b.busNumber == busNumber));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unpinned Bus $busNumber')),
+        );
+      }
+    } else {
+      final pinnedBus = PinnedBus(
+        busNumber: busNumber,
+        routeName: routeName,
+        pinnedAt: DateTime.now(),
+      );
+      await _storageService.addPinnedBus(pinnedBus);
+      setState(() => _pinnedBuses.add(pinnedBus));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Pinned Bus $busNumber to favorites')),
+        );
+      }
+    }
+  }
+
+  Future<void> _notifyBusNear(String busNumber, String routeName) async {
+    // Check if already tracking this bus
+    final isAlreadyTracked = _trackedBuses.any((b) => b.busNumber == busNumber);
+    
+    if (isAlreadyTracked) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Already tracking Bus $busNumber. You will be notified when it\'s near.')),
+        );
+      }
+      return;
+    }
+
+    // Show radius selector
+    final radius = await _showRadiusSelector();
+    if (radius != null) {
+      final trackedBus = TrackedBus(
+        busNumber: busNumber,
+        radiusMeters: radius,
+        addedAt: DateTime.now(),
+      );
+      await _storageService.addTrackedBus(trackedBus);
+      setState(() => _trackedBuses.add(trackedBus));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('You will be notified when Bus $busNumber is within ${radius}m'),
+          ),
+        );
       }
     }
   }
@@ -350,15 +426,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       height: MediaQuery.of(context).size.height * 0.7,
       child: _RoutesMenuContent(
         busRoutes: _filteredBuses,
-        trackedBuses: _trackedBuses,
+        pinnedBuses: _pinnedBuses,
         onBusTap: (bus) {
           Navigator.pop(context);
           Future.delayed(const Duration(milliseconds: 300), () {
             _showBusDetails(bus);
           });
         },
-        onToggleTrack: (busNumber) {
-          _toggleBusTracking(busNumber);
+        onTogglePin: (busNumber, routeName) {
+          _toggleBusPin(busNumber, routeName);
         },
       ),
     );
@@ -769,6 +845,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           _toggleBusTracking(bus.busNumber);
           Navigator.pop(context);
         },
+        onNotifyNear: () {
+          _notifyBusNear(bus.busNumber, bus.route);
+          Navigator.pop(context);
+        },
       ),
     );
   }
@@ -842,11 +922,13 @@ class _BusDetailsContent extends StatelessWidget {
   final BusLocation bus;
   final bool isTracked;
   final VoidCallback onToggleTrack;
+  final VoidCallback onNotifyNear;
 
   const _BusDetailsContent({
     required this.bus,
     required this.isTracked,
     required this.onToggleTrack,
+    required this.onNotifyNear,
   });
 
   @override
@@ -926,11 +1008,12 @@ class _BusDetailsContent extends StatelessWidget {
           Row(
             children: [
               Expanded(
+                flex: 2,
                 child: PremiumButton(
-                  text: isTracked ? 'Stop Notifications' : 'Notify Me',
+                  text: isTracked ? 'Stop Tracking' : 'Track Bus',
                   icon: isTracked
-                      ? Icons.notifications_off_rounded
-                      : Icons.notifications_active_rounded,
+                      ? Icons.location_off_rounded
+                      : Icons.my_location_rounded,
                   gradient: isTracked
                       ? const LinearGradient(
                           colors: [
@@ -942,13 +1025,38 @@ class _BusDetailsContent extends StatelessWidget {
                   onPressed: onToggleTrack,
                 ),
               ),
-              const SizedBox(width: AppleSpacing.md),
-              Expanded(
-                child: PremiumOutlineButton(
-                  text: 'Share',
-                  icon: Icons.share_rounded,
-                  borderColor: AppleColors.systemGray,
+              const SizedBox(width: AppleSpacing.sm),
+              // Bell icon for "notify when near" (quick track)
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: isTracked ? AppleColors.systemGray : AppleColors.accentGold,
+                    width: 2,
+                  ),
+                  borderRadius: AppleRadius.mdAll,
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    isTracked
+                        ? Icons.notifications_active
+                        : Icons.notifications_active_rounded,
+                    color: isTracked ? AppleColors.systemGray : AppleColors.accentGold,
+                  ),
+                  onPressed: isTracked ? null : onNotifyNear,
+                  tooltip: isTracked ? 'Already tracking' : 'Set notification',
+                ),
+              ),
+              const SizedBox(width: AppleSpacing.sm),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppleColors.systemGray, width: 2),
+                  borderRadius: AppleRadius.mdAll,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.share_rounded,
+                      color: AppleColors.systemGray),
                   onPressed: () {},
+                  tooltip: 'Share',
                 ),
               ),
             ],
@@ -998,15 +1106,15 @@ class _StatItem extends StatelessWidget {
 
 class _RoutesMenuContent extends StatefulWidget {
   final List<BusLocation> busRoutes;
-  final List<TrackedBus> trackedBuses;
+  final List<PinnedBus> pinnedBuses;
   final Function(BusLocation) onBusTap;
-  final Function(String) onToggleTrack;
+  final Function(String, String) onTogglePin;
 
   const _RoutesMenuContent({
     required this.busRoutes,
-    required this.trackedBuses,
+    required this.pinnedBuses,
     required this.onBusTap,
-    required this.onToggleTrack,
+    required this.onTogglePin,
   });
 
   @override
@@ -1152,8 +1260,8 @@ class _RoutesMenuContentState extends State<_RoutesMenuContent> {
                         const SizedBox(height: AppleSpacing.md),
                     itemBuilder: (context, index) {
                       final bus = _filteredRoutes[index];
-                      final isTracked = widget.trackedBuses
-                          .any((t) => t.busNumber == bus.busNumber);
+                      final isPinned = widget.pinnedBuses
+                          .any((p) => p.busNumber == bus.busNumber);
                       final isSharing = bus.status == 'active';
                       
                       return PremiumCard(
@@ -1227,19 +1335,20 @@ class _RoutesMenuContentState extends State<_RoutesMenuContent> {
                                     ],
                                   ),
                                 ),
-                                // Bell button
+                                // Pin button
                                 IconButton(
                                   icon: Icon(
-                                    isTracked
-                                        ? Icons.notifications_active
-                                        : Icons.notifications_outlined,
-                                    color: isTracked
+                                    isPinned
+                                        ? Icons.push_pin
+                                        : Icons.push_pin_outlined,
+                                    color: isPinned
                                         ? AppleColors.accentGold
                                         : AppleColors.systemGray,
                                   ),
                                   onPressed: () {
-                                    widget.onToggleTrack(bus.busNumber);
+                                    widget.onTogglePin(bus.busNumber, bus.route);
                                   },
+                                  tooltip: isPinned ? 'Unpin' : 'Pin to favorites',
                                 ),
                               ],
                             ),

@@ -7,6 +7,7 @@ import '../../config/apple_theme.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 
 class DriverTrackingScreen extends StatefulWidget {
   final String busNumber;
@@ -45,6 +46,11 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     _requestPermissions();
     _startLocationUpdates();
     _startTimeTracking();
+    _showLocationSharingNotification();
+  }
+
+  Future<void> _showLocationSharingNotification() async {
+    await NotificationService().showLocationSharingNotification();
   }
 
   @override
@@ -125,6 +131,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
       _locationTimer?.cancel();
       _timeTimer?.cancel();
       await ApiService().endShift();
+      await NotificationService().cancelLocationSharingNotification();
       if (mounted) {
         Navigator.pop(context);
       }
