@@ -1,340 +1,271 @@
-# API Documentation - Sathyabama Bus Tracker
+# Bus Tracker API Documentation
 
 ## Base URL
-- **Local**: `http://localhost:8000`
-- **Production**: `https://your-app.onrender.com`
+- **Production:** `https://sathyabama-bus-tracker.onrender.com/api/v1`
+- **Local:** `http://localhost:8000/api/v1`
 
 ## Authentication
-All protected endpoints require JWT token in Authorization header:
+
+All driver endpoints require authentication using JWT Bearer token.
+
+### Headers
 ```
 Authorization: Bearer <token>
+Content-Type: application/json
 ```
 
 ---
 
-## 📱 Authentication Endpoints
+## Authentication Endpoints
 
-### POST /api/v1/auth/register
-Register a new driver account.
-
-**Request Body:**
-```json
-{
-  "name": "John Doe",
-  "phone": "+919876543210",
-  "email": "john@example.com",
-  "password": "password123",
-  "is_admin": false
-}
-```
-
-**Response:** `201 Created`
-```json
-{
-  "driver_id": 1,
-  "name": "John Doe",
-  "phone": "+919876543210",
-  "email": "john@example.com",
-  "is_active": true,
-  "is_admin": false,
-  "created_at": "2024-01-01T00:00:00Z"
-}
-```
-
-### POST /api/v1/auth/login
-Login with phone and password.
+### POST /auth/login
+Login for drivers and admin.
 
 **Request Body:**
 ```json
 {
-  "phone": "+919876543210",
-  "password": "admin"
+  "phone": "+919876543211",
+  "password": "driver123"
 }
 ```
 
-**Response:** `200 OK`
+**Response:**
 ```json
 {
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
   "driver": {
-    "driver_id": 1,
-    "name": "Admin",
-    "phone": "+919876543210",
-    "email": "admin@sathyabama.edu",
+    "driver_id": 2,
+    "name": "Rajesh Kumar",
+    "phone": "+919876543211",
+    "email": "rajesh@sathyabama.edu",
     "is_active": true,
-    "is_admin": true,
-    "created_at": "2024-01-01T00:00:00Z"
+    "is_admin": false
   }
 }
 ```
 
-**Errors:**
-- `401`: Invalid credentials
-- `403`: Account inactive
-- `422`: Validation error (invalid phone format or missing fields)
+---
+
+## Driver Endpoints
+
+### GET /driver/profile
+Get current driver's profile with assigned bus and route.
+
+**Headers:** Requires authentication
+
+**Response:**
+```json
+{
+  "driver_id": 2,
+  "name": "Rajesh Kumar",
+  "phone": "+919876543211",
+  "email": "rajesh@sathyabama.edu",
+  "is_active": true,
+  "assigned_bus": "TN01AB1234",
+  "assigned_route": "R1",
+  "recent_buses": ["TN01AB1234"]
+}
+```
+
+### POST /driver/start-shift
+Driver starts their shift.
+
+**Headers:** Requires authentication
+
+**Request Body:**
+```json
+{
+  "bus_number": "TN01AB1234",
+  "route": "Tambaram - Sathyabama"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "shift_started",
+  "bus_number": "TN01AB1234",
+  "route": "Tambaram - Sathyabama",
+  "driver_name": "Rajesh Kumar"
+}
+```
+
+### POST /driver/end-shift
+Driver ends their shift.
+
+**Headers:** Requires authentication
+
+**Response:**
+```json
+{
+  "status": "shift_ended",
+  "message": "Shift ended successfully"
+}
+```
+
+### POST /driver/location/update
+Update bus location (called every 5 seconds by driver app).
+
+**Headers:** Requires authentication
+
+**Request Body:**
+```json
+{
+  "bus_number": "TN01AB1234",
+  "latitude": 12.9716,
+  "longitude": 80.2476,
+  "speed": 25.5,
+  "heading": 90.0,
+  "accuracy": 10.0
+}
+```
+
+**Response:**
+```json
+{
+  "status": "location_updated",
+  "bus_number": "TN01AB1234"
+}
+```
 
 ---
 
-## 👨‍💼 Admin Endpoints
+## Student Endpoints
 
-### GET /api/admin/statistics
-Get dashboard statistics (requires admin).
-
-**Headers:**
-```
-Authorization: Bearer <admin_token>
-```
-
-**Response:** `200 OK`
-```json
-{
-  "total_drivers": 10,
-  "active_drivers": 8,
-  "total_routes": 15,
-  "active_buses": 5,
-  "last_updated": "2024-01-01T00:00:00Z"
-}
-```
-
-### GET /api/admin/drivers
-List all drivers with pagination (requires admin).
+### GET /student/buses/active
+Get all active buses currently sharing location.
 
 **Query Parameters:**
-- `page` (int, default: 1)
-- `per_page` (int, default: 10)
-- `search` (string, optional)
+- `bounds` (optional): Map bounds for filtering `lat1,lng1,lat2,lng2`
 
-**Response:** `200 OK`
+**Response:**
 ```json
 {
-  "drivers": [
+  "buses": [
     {
-      "driver_id": 1,
-      "name": "John Doe",
-      "phone": "+919876543210",
-      "email": "john@example.com",
-      "is_active": true,
-      "is_admin": false,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": null
+      "busNumber": "TN01AB1234",
+      "route": "Tambaram - Sathyabama",
+      "latitude": 12.9716,
+      "longitude": 80.2476,
+      "speed": 25.5,
+      "heading": 90.0,
+      "lastUpdate": "2025-11-30T05:30:00",
+      "status": "moving",
+      "driverName": "Rajesh Kumar"
     }
   ],
-  "total": 10,
-  "page": 1,
-  "pages": 1
+  "timestamp": "2025-11-30T05:30:15",
+  "count": 1
 }
 ```
 
-### POST /api/admin/drivers
-Create new driver (requires admin).
+### GET /student/buses/{bus_number}
+Get specific bus location and details.
 
-**Request Body:**
+**Response:**
 ```json
 {
-  "name": "Jane Doe",
-  "phone": "+919876543211",
-  "email": "jane@example.com",
-  "password": "password123",
-  "is_admin": false,
-  "is_active": true
+  "busNumber": "TN01AB1234",
+  "route": "Tambaram - Sathyabama",
+  "latitude": 12.9716,
+  "longitude": 80.2476,
+  "speed": 25.5,
+  "heading": 90.0,
+  "lastUpdate": "2025-11-30T05:30:00",
+  "status": "moving",
+  "driverName": "Rajesh Kumar"
 }
 ```
 
-**Response:** `200 OK`
-```json
-{
-  "driver_id": 2,
-  "name": "Jane Doe",
-  "phone": "+919876543211",
-  "email": "jane@example.com",
-  "is_active": true,
-  "is_admin": false,
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": null
-}
-```
+---
 
-**Errors:**
-- `409`: Phone or email already exists
+## Admin Endpoints
 
-### PUT /api/admin/drivers/{driver_id}
-Update driver information (requires admin).
+All admin endpoints require admin authentication.
 
-**Request Body:**
-```json
-{
-  "name": "Jane Smith",
-  "phone": "+919876543211",
-  "email": "jane.smith@example.com",
-  "password": "newpassword123",
-  "is_admin": false,
-  "is_active": true
-}
-```
+### GET /admin/routes
+List all bus routes.
 
-**Response:** `200 OK`
-```json
-{
-  "driver_id": 2,
-  "name": "Jane Smith",
-  "phone": "+919876543211",
-  "email": "jane.smith@example.com",
-  "is_active": true,
-  "is_admin": false,
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-02T00:00:00Z"
-}
-```
+**Headers:** Requires admin authentication
 
-### DELETE /api/admin/drivers/{driver_id}
-Delete driver (requires admin).
-
-**Response:** `200 OK`
-```json
-{
-  "success": true,
-  "message": "Driver deleted successfully"
-}
-```
-
-### GET /api/admin/routes
-List all bus routes (requires admin).
-
-**Response:** `200 OK`
+**Response:**
 ```json
 [
   {
     "route_id": 1,
     "sl_no": 1,
-    "bus_route": "Guduvancherry-(Via)-Urapakkam-Kilambakkam...",
-    "route_no": "3A",
-    "vehicle_no": "BW1212",
-    "driver_id": 1,
-    "driver_name": "PANNEER",
-    "phone_number": "9789845536",
+    "bus_route": "Tambaram - Sathyabama",
+    "route_no": "R1",
+    "vehicle_no": "TN01AB1234",
+    "driver_id": 2,
+    "driver_name": "Rajesh Kumar",
+    "phone_number": "+919876543211",
     "is_active": true,
-    "created_at": "2024-01-01T00:00:00Z",
+    "created_at": "2025-11-30T00:00:00",
     "updated_at": null
   }
 ]
 ```
 
-### POST /api/admin/routes
-Create new bus route (requires admin).
+### POST /admin/routes
+Create new bus route.
+
+**Headers:** Requires admin authentication
 
 **Request Body:**
 ```json
 {
-  "bus_route": "Guduvancherry-(Via)-Urapakkam...",
-  "route_no": "3A",
-  "vehicle_no": "BW1212",
-  "driver_id": 1,
-  "driver_name": "PANNEER",
-  "phone_number": "9789845536",
+  "bus_route": "Guindy - Sathyabama via Velachery",
+  "route_no": "R6",
+  "vehicle_no": "TN01EF1234",
+  "driver_name": "New Driver",
+  "phone_number": "+919876543220",
   "is_active": true
 }
 ```
 
-**Response:** `200 OK`
+### GET /admin/statistics
+Get dashboard statistics.
+
+**Headers:** Requires admin authentication
+
+**Response:**
 ```json
 {
-  "route_id": 1,
-  "sl_no": 1,
-  "bus_route": "Guduvancherry-(Via)-Urapakkam...",
-  "route_no": "3A",
-  "vehicle_no": "BW1212",
-  "driver_id": 1,
-  "driver_name": "PANNEER",
-  "phone_number": "9789845536",
-  "is_active": true,
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": null
+  "total_drivers": 4,
+  "active_drivers": 3,
+  "total_routes": 5,
+  "active_buses": 2,
+  "last_updated": "2025-11-30T05:30:00"
 }
 ```
 
-### PUT /api/admin/routes/{route_id}
-Update bus route (requires admin).
+### GET /admin/drivers
+List all drivers with pagination.
 
-**Request Body:** (all fields optional)
-```json
-{
-  "bus_route": "Updated route description",
-  "route_no": "3B",
-  "vehicle_no": "BW1213",
-  "driver_name": "NEW DRIVER",
-  "phone_number": "9876543210"
-}
-```
-
-### DELETE /api/admin/routes/{route_id}
-Delete bus route (requires admin).
-
-**Response:** `200 OK`
-```json
-{
-  "success": true,
-  "message": "Route deleted successfully"
-}
-```
-
-### POST /api/admin/routes/import
-Bulk import routes from Excel/CSV (requires admin).
-
-**Request:** `multipart/form-data`
-```
-file: <Excel or CSV file>
-```
-
-**File Format:**
-```csv
-Sl.No,Bus Route,Route No,Vehicle No,Driver Name,Phone Number
-1,Guduvancherry-(Via)-Urapakkam...,3A,BW1212,PANNEER,9789845536
-```
-
-**Response:** `200 OK`
-```json
-{
-  "imported": 5,
-  "failed": 0,
-  "errors": []
-}
-```
-
-### GET /api/admin/routes/export
-Export routes as Excel or PDF (requires admin).
+**Headers:** Requires admin authentication
 
 **Query Parameters:**
-- `format` (string): "excel" or "pdf"
+- `page` (default: 1): Page number
+- `per_page` (default: 10): Items per page
+- `search` (optional): Search by name, phone, or email
 
-**Response:** File download
-
-### GET /api/admin/audit-log
-Get audit log entries (requires admin).
-
-**Query Parameters:**
-- `start_date` (datetime, optional)
-- `end_date` (datetime, optional)
-- `action_type` (string, optional): "CREATE", "UPDATE", "DELETE", or "ALL"
-- `page` (int, default: 1)
-- `per_page` (int, default: 50)
-
-**Response:** `200 OK`
+**Response:**
 ```json
 {
-  "logs": [
+  "drivers": [
     {
-      "log_id": 1,
-      "admin_id": 1,
-      "admin_name": "Admin",
-      "action_type": "CREATE",
-      "entity_type": "driver",
-      "entity_id": 2,
-      "changes": {"name": "John Doe", "phone": "+919876543210"},
-      "created_at": "2024-01-01T00:00:00Z"
+      "driver_id": 2,
+      "name": "Rajesh Kumar",
+      "phone": "+919876543211",
+      "email": "rajesh@sathyabama.edu",
+      "is_active": true,
+      "is_admin": false,
+      "created_at": "2025-11-30T00:00:00"
     }
   ],
-  "total": 10,
+  "total": 4,
   "page": 1,
   "pages": 1
 }
@@ -342,136 +273,40 @@ Get audit log entries (requires admin).
 
 ---
 
-## 🚗 Driver Endpoints
+## Data Models
 
-### GET /api/v1/driver/profile
-Get current driver's profile (requires authentication).
+### Bus Status
+- `moving`: Speed > 5 km/h
+- `idle`: Speed < 1 km/h
+- `stopped`: Speed between 1-5 km/h
+- `active`: Bus is sharing location
 
-**Response:** `200 OK`
-```json
-{
-  "driver_id": 1,
-  "name": "John Doe",
-  "phone": "+919876543210",
-  "email": "john@example.com",
-  "is_active": true,
-  "is_admin": false
-}
-```
+### Location Update Frequency
+- Driver app sends location every **5 seconds**
+- Student app refreshes every **10 seconds**
+- Redis cache TTL: **60 seconds**
 
-### PUT /api/v1/driver/profile
-Update current driver's profile (requires authentication).
+### Available Routes
+- **R1**: Tambaram - Sathyabama
+- **R2**: Velachery - Sathyabama
+- **R3**: Adyar - Sathyabama
+- **R4**: Guindy - Sathyabama via Velachery, Medavakkam
+- **R5**: T.Nagar - Sathyabama via Saidapet, Guindy
 
-**Request Body:**
-```json
-{
-  "name": "John Smith",
-  "email": "john.smith@example.com"
-}
-```
+### Test Accounts
 
-### POST /api/v1/driver/location
-Update driver's current location (requires authentication).
+**Admin:**
+- Phone: +919876543210
+- Password: admin
 
-**Request Body:**
-```json
-{
-  "latitude": 12.9716,
-  "longitude": 77.5946,
-  "speed": 45.5,
-  "heading": 180.0
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "message": "Location updated successfully"
-}
-```
+**Drivers:**
+1. Phone: +919876543211 / Password: driver123 / Bus: TN01AB1234 / Route: R1
+2. Phone: +919876543212 / Password: driver123 / Bus: TN01AB5678 / Route: R2
+3. Phone: +919876543213 / Password: driver123 / Bus: TN01AB9012 / Route: R3
 
 ---
 
-## 🎓 Student Endpoints
-
-### GET /api/v1/student/buses
-Get all active buses with real-time locations.
-
-**Response:** `200 OK`
-```json
-[
-  {
-    "bus_number": "BW1212",
-    "route_name": "Route 3A",
-    "driver_name": "PANNEER",
-    "latitude": 12.9716,
-    "longitude": 77.5946,
-    "speed": 45.5,
-    "last_updated": "2024-01-01T00:00:00Z"
-  }
-]
-```
-
-### GET /api/v1/student/routes
-Get all available bus routes.
-
-**Response:** `200 OK`
-```json
-[
-  {
-    "route_id": 1,
-    "route_no": "3A",
-    "route_name": "Guduvancherry Route",
-    "stops": ["Stop 1", "Stop 2", "Stop 3"]
-  }
-]
-```
-
----
-
-## 🌐 WebSocket Endpoints
-
-### WS /ws/live-updates
-Real-time bus location updates.
-
-**Connection:**
-```javascript
-const ws = new WebSocket('ws://localhost:8000/ws/live-updates');
-```
-
-**Receive Message:**
-```json
-{
-  "type": "bus_update",
-  "buses": [
-    {
-      "bus_number": "BW1212",
-      "latitude": 12.9716,
-      "longitude": 77.5946,
-      "speed": 45.5
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00Z"
-}
-```
-
----
-
-## 🏥 Health Check
-
-### GET /health
-Check if API is running.
-
-**Response:** `200 OK`
-```json
-{
-  "status": "healthy"
-}
-```
-
----
-
-## ❌ Common Error Responses
+## Error Responses
 
 ### 400 Bad Request
 ```json
@@ -483,28 +318,14 @@ Check if API is running.
 ### 401 Unauthorized
 ```json
 {
-  "detail": "Invalid authentication credentials"
-}
-```
-
-### 403 Forbidden
-```json
-{
-  "detail": "Admin access required"
+  "detail": "Invalid phone number or password"
 }
 ```
 
 ### 404 Not Found
 ```json
 {
-  "detail": "Resource not found"
-}
-```
-
-### 409 Conflict
-```json
-{
-  "detail": "Phone number already exists"
+  "detail": "Bus TN01AB1234 not found in routes"
 }
 ```
 
@@ -513,7 +334,7 @@ Check if API is running.
 {
   "detail": [
     {
-      "loc": ["body", "phone"],
+      "loc": ["body", "bus_number"],
       "msg": "field required",
       "type": "value_error.missing"
     }
@@ -530,106 +351,80 @@ Check if API is running.
 
 ---
 
-## 📝 Notes
+## Rate Limiting
 
-### Phone Number Format
-- Must include country code: `+91XXXXXXXXXX`
-- Example: `+919876543210`
-
-### Date Format
-- ISO 8601: `2024-01-01T00:00:00Z`
-
-### Pagination
-- Default page size: 10 (drivers), 50 (audit logs)
-- Page numbers start at 1
-
-### File Upload
-- Supported formats: `.xlsx`, `.xls`, `.csv`
-- Maximum file size: 5MB
-- Required columns for route import:
-  - Sl.No
-  - Bus Route
-  - Route No
-  - Vehicle No
-  - Driver Name
-  - Phone Number
+No rate limiting currently implemented. Consider adding rate limiting for production:
+- Location updates: Max 1 request per 5 seconds per driver
+- Active buses: Max 1 request per 10 seconds per student
 
 ---
 
-## 🔧 Testing with cURL
+## WebSocket (Future Enhancement)
+
+Currently not implemented. Future versions will include WebSocket support for real-time updates:
+
+```
+ws://localhost:8000/ws/live-updates
+```
+
+---
+
+## Notes
+
+1. **Authentication Token:** JWT tokens expire in 10 years (permanent session for drivers)
+2. **Location Data:** Stored in Redis with 60-second TTL for real-time access
+3. **Database:** SQLite for development, PostgreSQL for production
+4. **CORS:** Configured to allow requests from Flutter app
+5. **Time Zone:** All timestamps in UTC
+
+---
+
+## Testing with cURL
 
 ### Login
 ```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
+curl -X POST https://sathyabama-bus-tracker.onrender.com/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"phone":"+919876543210","password":"admin"}'
+  -d '{"phone":"+919876543211","password":"driver123"}'
 ```
 
-### Get Statistics (with token)
+### Get Profile
 ```bash
-curl -X GET http://localhost:8000/api/admin/statistics \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+curl https://sathyabama-bus-tracker.onrender.com/api/v1/driver/profile \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
-### Create Driver
+### Start Shift
 ```bash
-curl -X POST http://localhost:8000/api/admin/drivers \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+curl -X POST https://sathyabama-bus-tracker.onrender.com/api/v1/driver/start-shift \
+  -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Test Driver","phone":"+919999999999","password":"test123","is_admin":false,"is_active":true}'
+  -d '{"bus_number":"TN01AB1234","route":"Tambaram - Sathyabama"}'
+```
+
+### Update Location
+```bash
+curl -X POST https://sathyabama-bus-tracker.onrender.com/api/v1/driver/location/update \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"bus_number":"TN01AB1234","latitude":12.9716,"longitude":80.2476,"speed":25.5,"heading":90.0,"accuracy":10.0}'
+```
+
+### Get Active Buses
+```bash
+curl https://sathyabama-bus-tracker.onrender.com/api/v1/student/buses/active
 ```
 
 ---
 
-## 🚀 Interactive API Documentation
+## Changelog
 
-FastAPI provides automatic interactive API documentation:
-
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
-These interfaces allow you to:
-- View all endpoints
-- Test endpoints directly
-- See request/response schemas
-- Try authentication
-
----
-
-## 📱 Frontend Integration
-
-### Admin Dashboard (Web)
-- Base URL: `/admin`
-- Login: `/admin/login`
-- Uses: `/api/admin/*` endpoints
-
-### Flutter App (Mobile)
-- Driver Interface: Uses `/api/v1/driver/*` and `/api/v1/auth/*`
-- Student Interface: Uses `/api/v1/student/*`
-- Real-time Updates: Uses WebSocket `/ws/live-updates`
-
----
-
-## 🔐 Security Best Practices
-
-1. **Always use HTTPS in production**
-2. **Store tokens securely** (localStorage for web, secure storage for mobile)
-3. **Never commit tokens or credentials** to version control
-4. **Rotate SECRET_KEY regularly**
-5. **Implement rate limiting** for login endpoints
-6. **Validate all inputs** on both client and server
-7. **Use strong passwords** (minimum 6 characters, but recommend 8+)
-8. **Enable CORS only for trusted domains**
-
----
-
-## 📞 Support
-
-For issues or questions:
-1. Check the logs for error messages
-2. Verify request format matches documentation
-3. Test with interactive docs at `/docs`
-4. Check authentication token is valid
-5. Ensure all required fields are provided
-
-Happy coding! 🚀
+### Version 1.0.0 (2025-11-30)
+- Initial API release
+- Driver authentication and profile management
+- Location tracking with Redis cache
+- Student bus viewing
+- Admin dashboard with route management
+- Fixed all endpoint compatibility issues with Flutter app
+- Removed random bus number generation
+- Drivers now only see their assigned buses
