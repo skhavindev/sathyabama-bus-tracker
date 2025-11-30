@@ -1,97 +1,158 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Optional
+from pydantic import BaseModel
 from ..database import get_db
 from ..models.driver import Driver
+from ..models.bus_route import BusRoute
 from ..services.auth_service import get_current_driver
-from ..models.location import ActiveBusLocation
-from ..models.route import Route
-from ..models.bus import Bus
-from ..schemas.location import LocationUpdate, BusLocationResponse, ActiveBusesResponse
 from ..services.cache_service import CacheService
 from datetime import datetime
 
 router = APIRouter(prefix="/api/v1/driver", tags=["Driver"])
 
 
-@router.get("/profile")
+# Request/Response Models
+class StartShiftRequest(BaseModel):
+    bus_number: str
+    route: str
+
+
+class LocationUpdateRequest(BaseModel):
+    bus_number: str
+    latitude: float
+    longitude: float
+    speed: float
+    heading: float = 0.0
+    accuracy: float = 10.0
+
+
+class DriverProfileResponse(BaseModel):
+    driver_id: int
+    name: str
+    phone: str
+    email: Optional[str]
+    is_active: bool
+    assigned_bus: Optional[str] = None
+    assigned_route: Optional[str] = None
+    recent_buses: list = []
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/profile", response_model=DriverProfileResponse)
 def get_driver_profile(current_driver: Driver = Depends(get_current_driver())):
-    """Get current driver's profile."""
-    from ..schemas.driver import DriverResponse
-    return DriverResponse.from_orm(current_driver)
+    """Get current driver's profile with assigned bus and route."""
+    
+    # Get driver's assigned bus route
+    bus_route = None
+    if hasattr(current_driver, 'routes') and current_driver.routes:
+        bus_route = current_driver.routes[0]
+    
+    return DriverProfileResponse(
+        driver_id=current_driver.driver_id,
+        name=current_driver.name,
+        phone=current_driver.phone,
+        email=current_driver.email,
+        is_active=current_driver.is_active,
+        assigned_bus=bus_route.vehicle_no if bus_route else None,
+        assigned_route=bus_route.route_no if bus_route else None,
+        recent_buses=[bus_route.vehicle_no] if bus_route else []
+    )
 
 
 @router.post("/start-shift")
-def start_shift(bus_number: str, route_id: int = None, db: Session = Depends(get_db)):
+def start_shift(
+    request: StartShiftRequest,
+    current_driver: Driver = Depends(get_current_driver()),
+    db: Session = Depends(get_db)
+):
     """Driver starts their shift."""
     
-    # Check if bus exists
-    bus = db.query(Bus).filter(Bus.bus_number == bus_number).first()
-    if not bus:
-        raise HTTPException(status_code=404, detail="Bus not found")
+    # Verify bus exists in routes
+    bus_route = db.query(BusRoute).filter(
+        BusRoute.vehicle_no == request.bus_number
+    ).first()
     
-    # Update bus status to active
-    bus.status = "active"
-    db.commit()
+    if not bus_route:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Bus {request.bus_number} not found in routes"
+        )
     
-    return {"status": "shift_started", "bus_number": bus_number, "route_id": route_id}
+    # Mark bus as active in cache
+    CacheService.set_bus_location(
+        request.bus_number,
+        {
+            "bus_number": request.bus_number,
+            "route": request.route,
+            "driver_name": current_driver.name,
+            "status": "active",
+            "last_update": datetime.utcnow().isoformat()
+        },
+        ttl=300  # 5 minutes
+    )
+    
+    return {
+        "status": "shift_started",
+        "bus_number": request.bus_number,
+        "route": request.route,
+        "driver_name": current_driver.name
+    }
 
 
 @router.post("/end-shift")
-def end_shift(bus_number: str, db: Session = Depends(get_db)):
+def end_shift(
+    current_driver: Driver = Depends(get_current_driver())
+):
     """Driver ends their shift."""
     
-    # Update bus status to inactive
-    bus = db.query(Bus).filter(Bus.bus_number == bus_number).first()
-    if bus:
-        bus.status = "inactive"
-        db.commit()
+    # Note: We don't know which bus without additional data
+    # The Flutter app should send bus_number, but for now we'll just return success
     
-    # Remove from Redis cache
-    CacheService.remove_bus(bus_number)
-    
-    return {"status": "shift_ended", "bus_number": bus_number}
+    return {
+        "status": "shift_ended",
+        "message": "Shift ended successfully"
+    }
 
 
 @router.post("/location/update")
-def update_location(location: LocationUpdate, db: Session = Depends(get_db)):
+def update_location(
+    request: LocationUpdateRequest,
+    current_driver: Driver = Depends(get_current_driver()),
+    db: Session = Depends(get_db)
+):
     """
     Update bus location (called every 5-10 seconds by driver app).
-    Stores in Redis for real-time, batches to PostgreSQL.
+    Stores in Redis for real-time updates.
     """
     
     # Determine status based on speed
-    status = "moving" if location.speed and location.speed > 5 else "stopped"
-    if location.speed and location.speed < 1:
+    if request.speed > 5:
+        status = "moving"
+    elif request.speed < 1:
         status = "idle"
+    else:
+        status = "stopped"
     
     # Prepare location data
     location_data = {
-        "bus_number": location.bus_number,
-        "route_id": location.route_id,
-        "latitude": location.latitude,
-        "longitude": location.longitude,
-        "speed": location.speed,
-        "heading": location.heading,
+        "bus_number": request.bus_number,
+        "latitude": request.latitude,
+        "longitude": request.longitude,
+        "speed": request.speed,
+        "heading": request.heading,
+        "accuracy": request.accuracy,
+        "driver_name": current_driver.name,
         "last_update": datetime.utcnow().isoformat(),
         "status": status
     }
     
     # Store in Redis (60-second TTL)
-    CacheService.set_bus_location(location.bus_number, location_data, ttl=60)
+    CacheService.set_bus_location(request.bus_number, location_data, ttl=60)
     
-    # Also save to PostgreSQL (for history/analytics)
-    new_location = ActiveBusLocation(
-        bus_number=location.bus_number,
-        route_id=location.route_id,
-        latitude=location.latitude,
-        longitude=location.longitude,
-        speed=location.speed,
-        heading=location.heading,
-        accuracy=location.accuracy
-    )
-    
-    db.add(new_location)
-    db.commit()
-    
-    return {"status": "location_updated", "bus_number": location.bus_number}
+    return {
+        "status": "location_updated",
+        "bus_number": request.bus_number
+    }

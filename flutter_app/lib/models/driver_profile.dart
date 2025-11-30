@@ -1,15 +1,19 @@
 class DriverProfile {
-  final String id;
+  final int driverId;
   final String name;
-  final String phoneNumber;
+  final String phone;
+  final String? email;
+  final bool isActive;
   final String? assignedBus;
   final String? assignedRoute;
   final List<String> recentBuses;
 
   DriverProfile({
-    required this.id,
+    required this.driverId,
     required this.name,
-    required this.phoneNumber,
+    required this.phone,
+    this.email,
+    required this.isActive,
     this.assignedBus,
     this.assignedRoute,
     this.recentBuses = const [],
@@ -17,9 +21,11 @@ class DriverProfile {
 
   factory DriverProfile.fromJson(Map<String, dynamic> json) {
     return DriverProfile(
-      id: json['id']?.toString() ?? '',
+      driverId: json['driver_id'] ?? 0,
       name: json['name'] ?? '',
-      phoneNumber: json['phone_number'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'],
+      isActive: json['is_active'] ?? true,
       assignedBus: json['assigned_bus'],
       assignedRoute: json['assigned_route'],
       recentBuses: json['recent_buses'] != null
@@ -30,9 +36,11 @@ class DriverProfile {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'driver_id': driverId,
       'name': name,
-      'phone_number': phoneNumber,
+      'phone': phone,
+      'email': email,
+      'is_active': isActive,
       'assigned_bus': assignedBus,
       'assigned_route': assignedRoute,
       'recent_buses': recentBuses,

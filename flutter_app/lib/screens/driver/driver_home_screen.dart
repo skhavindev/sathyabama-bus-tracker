@@ -22,9 +22,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   List<String> _buses = [];
   final List<Map<String, String>> _routes = [
-    {'id': '1', 'name': 'Campus to Chromepet'},
-    {'id': '2', 'name': 'Campus to Velachery'},
-    {'id': '3', 'name': 'Campus to Tambaram'},
+    {'id': 'R1', 'name': 'Tambaram - Sathyabama'},
+    {'id': 'R2', 'name': 'Velachery - Sathyabama'},
+    {'id': 'R3', 'name': 'Adyar - Sathyabama'},
+    {'id': 'R4', 'name': 'Guindy - Sathyabama via Velachery, Medavakkam'},
+    {'id': 'R5', 'name': 'T.Nagar - Sathyabama via Saidapet, Guindy'},
   ];
 
   @override
@@ -39,9 +41,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       setState(() {
         _selectedBus = profile.assignedBus;
         _selectedRoute = profile.assignedRoute;
-        _buses = profile.recentBuses.isNotEmpty
-            ? profile.recentBuses
-            : List.generate(10, (i) => (i + 1).toString().padLeft(3, '0'));
+        // Only show assigned bus, no random buses
+        _buses = profile.assignedBus != null ? [profile.assignedBus!] : [];
         _isLoading = false;
       });
     } catch (e) {

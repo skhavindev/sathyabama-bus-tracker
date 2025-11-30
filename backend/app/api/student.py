@@ -1,17 +1,15 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from ..database import get_db
-from ..models.location import ActiveBusLocation
-from ..models.route import Route
-from ..schemas.location import BusLocationResponse, ActiveBusesResponse
+from ..models.bus_route import BusRoute
 from ..services.cache_service import CacheService
 from datetime import datetime
 
 router = APIRouter(prefix="/api/v1/student", tags=["Student"])
 
 
-@router.get("/buses/active", response_model=ActiveBusesResponse)
+@router.get("/buses/active")
 def get_active_buses(
     bounds: str = Query(None, description="Map bounds: lat1,lng1,lat2,lng2"),
     db: Session = Depends(get_db)
@@ -27,6 +25,10 @@ def get_active_buses(
     # Convert to response format
     buses = []
     for bus_data in active_buses_data:
+        # Skip if no location data
+        if 'latitude' not in bus_data or 'longitude' not in bus_data:
+            continue
+            
         # Filter by bounds if provided
         if bounds:
             try:
@@ -36,28 +38,35 @@ def get_active_buses(
             except:
                 pass  # Ignore invalid bounds
         
-        # Get route name if available
-        route_name = None
-        if bus_data.get('route_id'):
-            route = db.query(Route).filter(Route.route_id == bus_data['route_id']).first()
-            route_name = route.route_name if route else None
+        # Get route info from database
+        route_name = bus_data.get('route', 'Unknown Route')
+        bus_route = db.query(BusRoute).filter(
+            BusRoute.vehicle_no == bus_data['bus_number']
+        ).first()
         
-        buses.append(BusLocationResponse(
-            bus_number=bus_data['bus_number'],
-            route_id=bus_data.get('route_id'),
-            route_name=route_name,
-            latitude=bus_data['latitude'],
-            longitude=bus_data['longitude'],
-            speed=bus_data.get('speed'),
-            heading=bus_data.get('heading'),
-            last_update=datetime.fromisoformat(bus_data['last_update']),
-            status=bus_data['status']
-        ))
+        if bus_route:
+            route_name = bus_route.bus_route
+        
+        buses.append({
+            "busNumber": bus_data['bus_number'],
+            "route": route_name,
+            "latitude": bus_data['latitude'],
+            "longitude": bus_data['longitude'],
+            "speed": bus_data.get('speed', 0),
+            "heading": bus_data.get('heading', 0),
+            "lastUpdate": bus_data.get('last_update', datetime.utcnow().isoformat()),
+            "status": bus_data.get('status', 'active'),
+            "driverName": bus_data.get('driver_name', 'Unknown')
+        })
     
-    return ActiveBusesResponse(buses=buses, timestamp=datetime.utcnow())
+    return {
+        "buses": buses,
+        "timestamp": datetime.utcnow().isoformat(),
+        "count": len(buses)
+    }
 
 
-@router.get("/buses/{bus_number}", response_model=BusLocationResponse)
+@router.get("/buses/{bus_number}")
 def get_bus_location(bus_number: str, db: Session = Depends(get_db)):
     """Get specific bus location and details."""
     
@@ -65,39 +74,28 @@ def get_bus_location(bus_number: str, db: Session = Depends(get_db)):
     bus_data = CacheService.get_bus_location(bus_number)
     
     if not bus_data:
-        # Fallback to database (last known location)
-        last_location = db.query(ActiveBusLocation).filter(
-            ActiveBusLocation.bus_number == bus_number
-        ).order_by(ActiveBusLocation.recorded_at.desc()).first()
-        
-        if not last_location:
-            return None
-        
-        bus_data = {
-            "bus_number": last_location.bus_number,
-            "route_id": last_location.route_id,
-            "latitude": last_location.latitude,
-            "longitude": last_location.longitude,
-            "speed": last_location.speed,
-            "heading": last_location.heading,
-            "last_update": last_location.recorded_at.isoformat(),
-            "status": "stopped"
+        return {
+            "error": "Bus not found or not currently active",
+            "bus_number": bus_number
         }
     
-    # Get route name
-    route_name = None
-    if bus_data.get('route_id'):
-        route = db.query(Route).filter(Route.route_id == bus_data['route_id']).first()
-        route_name = route.route_name if route else None
+    # Get route info
+    route_name = bus_data.get('route', 'Unknown Route')
+    bus_route = db.query(BusRoute).filter(
+        BusRoute.vehicle_no == bus_number
+    ).first()
     
-    return BusLocationResponse(
-        bus_number=bus_data['bus_number'],
-        route_id=bus_data.get('route_id'),
-        route_name=route_name,
-        latitude=bus_data['latitude'],
-        longitude=bus_data['longitude'],
-        speed=bus_data.get('speed'),
-        heading=bus_data.get('heading'),
-        last_update=datetime.fromisoformat(bus_data['last_update']),
-        status=bus_data['status']
-    )
+    if bus_route:
+        route_name = bus_route.bus_route
+    
+    return {
+        "busNumber": bus_data['bus_number'],
+        "route": route_name,
+        "latitude": bus_data.get('latitude', 0),
+        "longitude": bus_data.get('longitude', 0),
+        "speed": bus_data.get('speed', 0),
+        "heading": bus_data.get('heading', 0),
+        "lastUpdate": bus_data.get('last_update', datetime.utcnow().isoformat()),
+        "status": bus_data.get('status', 'active'),
+        "driverName": bus_data.get('driver_name', 'Unknown')
+    }
