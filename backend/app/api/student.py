@@ -9,6 +9,39 @@ from datetime import datetime
 router = APIRouter(prefix="/api/v1/student", tags=["Student"])
 
 
+@router.get("/routes/all")
+def get_all_routes(db: Session = Depends(get_db)):
+    """
+    Get all bus routes from database (for route list view).
+    Shows all routes regardless of active status.
+    """
+    routes = db.query(BusRoute).filter(BusRoute.is_active == True).order_by(BusRoute.sl_no).all()
+    
+    # Get active buses from Redis to check status
+    active_buses_data = CacheService.get_all_active_buses()
+    active_bus_numbers = {bus['bus_number'] for bus in active_buses_data if 'bus_number' in bus}
+    
+    route_list = []
+    for route in routes:
+        is_sharing = route.vehicle_no in active_bus_numbers
+        
+        route_list.append({
+            "routeId": route.route_id,
+            "routeNo": route.route_no,
+            "routeName": route.bus_route,
+            "busNumber": route.vehicle_no,
+            "driverName": route.driver_name,
+            "phoneNumber": route.phone_number,
+            "isActive": route.is_active,
+            "isSharingLocation": is_sharing
+        })
+    
+    return {
+        "routes": route_list,
+        "count": len(route_list)
+    }
+
+
 @router.get("/buses/active")
 def get_active_buses(
     bounds: str = Query(None, description="Map bounds: lat1,lng1,lat2,lng2"),
@@ -56,7 +89,8 @@ def get_active_buses(
             "heading": bus_data.get('heading', 0),
             "lastUpdate": bus_data.get('last_update', datetime.utcnow().isoformat()),
             "status": bus_data.get('status', 'active'),
-            "driverName": bus_data.get('driver_name', 'Unknown')
+            "driverName": bus_data.get('driver_name', 'Unknown'),
+            "isSharingLocation": True
         })
     
     return {

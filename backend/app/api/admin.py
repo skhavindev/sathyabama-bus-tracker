@@ -283,7 +283,7 @@ def create_route(
     db: Session = Depends(get_db),
     current_admin: Driver = Depends(get_current_admin())
 ):
-    """Create new bus route"""
+    """Create new bus route and auto-link to driver by phone number"""
     # Check vehicle_no uniqueness
     existing = db.query(BusRoute).filter(BusRoute.vehicle_no == route_data.vehicle_no).first()
     if existing:
@@ -296,13 +296,20 @@ def create_route(
     max_sl_no = db.query(BusRoute).count()
     next_sl_no = max_sl_no + 1
     
+    # Try to find driver by phone number to auto-link
+    driver_id = route_data.driver_id
+    if not driver_id and route_data.phone_number:
+        driver = db.query(Driver).filter(Driver.phone == route_data.phone_number).first()
+        if driver:
+            driver_id = driver.driver_id
+    
     # Create route
     new_route = BusRoute(
         sl_no=next_sl_no,
         bus_route=route_data.bus_route,
         route_no=route_data.route_no,
         vehicle_no=route_data.vehicle_no,
-        driver_id=route_data.driver_id,
+        driver_id=driver_id,
         driver_name=route_data.driver_name,
         phone_number=route_data.phone_number,
         is_active=route_data.is_active
@@ -315,7 +322,7 @@ def create_route(
     # Create audit log
     create_audit_log(
         db, current_admin.driver_id, "CREATE", "route", new_route.route_id,
-        {"route_no": new_route.route_no, "vehicle_no": new_route.vehicle_no}
+        {"route_no": new_route.route_no, "vehicle_no": new_route.vehicle_no, "driver_id": driver_id}
     )
     
     return new_route

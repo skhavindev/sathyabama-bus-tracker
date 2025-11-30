@@ -159,6 +159,23 @@ class ApiService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getAllRoutes() async {
+    try {
+      final response = await _dio.get('/student/routes/all');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['routes'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } on DioException catch (e) {
+      if (AppConfig.enableLogging) {
+        print('Failed to fetch routes: ${e.message}');
+      }
+      return [];
+    }
+  }
+
   // Error handling
   ApiException _handleError(DioException e) {
     String message;
