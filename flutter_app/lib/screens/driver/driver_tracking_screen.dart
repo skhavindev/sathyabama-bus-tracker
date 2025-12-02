@@ -61,18 +61,26 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   }
 
   void _startSharing() {
-    _sharingService.startSharing();
+    // Only start if not already sharing
+    if (!_sharingService.isSharing) {
+      _sharingService.startSharing();
+    }
   }
 
   void _setupUIUpdates() {
     // Update UI periodically based on service state
     _uiUpdateTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (mounted) {
+        setState(() {
+          final position = _sharingService.currentPosition;
+          if (position != null) {
+            _currentLocation = LatLng(position.latitude, position.longitude);
+          }
+        });
+        
+        // Only move map if position changed
         final position = _sharingService.currentPosition;
         if (position != null) {
-          setState(() {
-            _currentLocation = LatLng(position.latitude, position.longitude);
-          });
           _mapController.move(_currentLocation, 15.0);
         }
       }
