@@ -27,8 +27,12 @@ class LocationSharingService {
   double get currentSpeed => _currentSpeed;
 
   void startSharing() {
-    if (_isSharing) return;
+    if (_isSharing) {
+      print('Location sharing already active');
+      return;
+    }
     
+    print('Starting location sharing service');
     _isSharing = true;
     _isPaused = false;
     _timeElapsed = Duration.zero;
@@ -39,23 +43,37 @@ class LocationSharingService {
 
   void _startLocationUpdates() {
     _locationTimer?.cancel();
+    print('Starting location update timer');
     _locationTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (_isPaused || !_isSharing) return;
+      if (_isPaused || !_isSharing) {
+        print('Location update skipped - isPaused: $_isPaused, isSharing: $_isSharing');
+        return;
+      }
 
+      print('Getting current position...');
       final position = await LocationService().getCurrentPosition();
       if (position != null) {
         _currentPosition = position;
         _currentSpeed = position.speed * 3.6; // Convert m/s to km/h
 
+        print('Position: ${position.latitude}, ${position.longitude}, Speed: $_currentSpeed km/h');
+
         // Update backend
-        await ApiService().updateLocation(
-          position.latitude,
-          position.longitude,
-          position.speed,
-        );
+        try {
+          await ApiService().updateLocation(
+            position.latitude,
+            position.longitude,
+            position.speed,
+          );
+          print('Location updated successfully');
+        } catch (e) {
+          print('Failed to update location: $e');
+        }
 
         // Notify listeners
         onLocationUpdate?.call(position, _currentSpeed);
+      } else {
+        print('Position is null');
       }
     });
   }
