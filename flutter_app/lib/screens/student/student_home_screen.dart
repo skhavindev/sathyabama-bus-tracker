@@ -100,6 +100,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         final busNumber = route['busNumber'] ?? '';
         final isSharingLocation = route['isSharingLocation'] == true;
         
+        print('📍 Bus $busNumber - isSharingLocation: $isSharingLocation');
+        
         // Check if this bus is currently active (sharing location)
         final activeBus = activeBuses.firstWhere(
           (b) => b.busNumber == busNumber,
@@ -115,7 +117,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         );
         
         // If bus is actively sharing location, use its real data
-        if (activeBus.busNumber.isNotEmpty && isSharingLocation) {
+        if (activeBus.busNumber.isNotEmpty) {
+          print('✅ Bus $busNumber is active with location data');
           return BusLocation(
             busNumber: busNumber,
             route: route['routeName'] ?? '',
@@ -127,6 +130,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           );
         } else {
           // Bus exists in database but not sharing location
+          print('❌ Bus $busNumber is offline');
           return BusLocation(
             busNumber: busNumber,
             route: route['routeName'] ?? '',
