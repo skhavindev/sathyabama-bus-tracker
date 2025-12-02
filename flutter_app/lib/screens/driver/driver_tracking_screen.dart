@@ -5,9 +5,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../config/apple_theme.dart';
 import '../../widgets/premium_widgets.dart';
-import '../../services/api_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/location_sharing_service.dart';
 
 class DriverTrackingScreen extends StatefulWidget {
   final String busNumber;
@@ -25,12 +25,8 @@ class DriverTrackingScreen extends StatefulWidget {
 
 class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   final MapController _mapController = MapController();
-  bool _isPaused = false;
-  double _currentSpeed = 0;
-  Duration _timeElapsed = Duration.zero;
-  Timer? _locationTimer;
-  Timer? _timeTimer;
-  Position? _currentPosition;
+  final LocationSharingService _sharingService = LocationSharingService();
+  Timer? _uiUpdateTimer;
 
   static const double defaultLatitude = 12.9716;
   static const double defaultLongitude = 80.2476;
@@ -44,9 +40,9 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   void initState() {
     super.initState();
     _requestPermissions();
-    _startLocationUpdates();
-    _startTimeTracking();
+    _startSharing();
     _showLocationSharingNotification();
+    _setupUIUpdates();
   }
 
   Future<void> _showLocationSharingNotification() async {
@@ -55,8 +51,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
 
   @override
   void dispose() {
-    _locationTimer?.cancel();
-    _timeTimer?.cancel();
+    _uiUpdateTimer?.cancel();
+    // Don't stop sharing service - it continues in background
     super.dispose();
   }
 
@@ -64,39 +60,28 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     await LocationService().requestPermissions();
   }
 
-  void _startLocationUpdates() {
-    _locationTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (_isPaused) return;
-
-      final position = await LocationService().getCurrentPosition();
-      if (position != null) {
-        setState(() {
-          _currentPosition = position;
-          _currentLocation = LatLng(position.latitude, position.longitude);
-          _currentSpeed = position.speed * 3.6; // Convert m/s to km/h
-        });
-
-        _mapController.move(_currentLocation, 15.0);
-
-        await ApiService().updateLocation(
-          position.latitude,
-          position.longitude,
-          position.speed,
-        );
-      }
-    });
+  void _startSharing() {
+    _sharingService.startSharing();
   }
 
-  void _startTimeTracking() {
-    _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused) {
-        setState(() => _timeElapsed += const Duration(seconds: 1));
+  void _setupUIUpdates() {
+    // Update UI periodically based on service state
+    _uiUpdateTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (mounted) {
+        final position = _sharingService.currentPosition;
+        if (position != null) {
+          setState(() {
+            _currentLocation = LatLng(position.latitude, position.longitude);
+          });
+          _mapController.move(_currentLocation, 15.0);
+        }
       }
     });
   }
 
   void _toggleSharing() {
-    setState(() => _isPaused = !_isPaused);
+    _sharingService.togglePause();
+    setState(() {});
   }
 
   Future<void> _endShift() async {
@@ -128,9 +113,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
     );
 
     if (confirm == true) {
-      _locationTimer?.cancel();
-      _timeTimer?.cancel();
-      await ApiService().endShift();
+      await _sharingService.stopSharing();
       await NotificationService().cancelLocationSharingNotification();
       if (mounted) {
         Navigator.pop(context);
@@ -233,8 +216,8 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         ),
                       ),
                       PremiumStatusBadge(
-                        text: _isPaused ? 'Paused' : 'Active',
-                        color: _isPaused
+                        text: _sharingService.isPaused ? 'Paused' : 'Active',
+                        color: _sharingService.isPaused
                             ? AppleColors.warning
                             : AppleColors.success,
                       ),
@@ -252,7 +235,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         child: _StatCard(
                           icon: Icons.speed_rounded,
                           label: 'Speed',
-                          value: '${_currentSpeed.toStringAsFixed(0)} km/h',
+                          value: '${_sharingService.currentSpeed.toStringAsFixed(0)} km/h',
                         ),
                       ),
                       const SizedBox(width: AppleSpacing.md),
@@ -260,7 +243,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         child: _StatCard(
                           icon: Icons.access_time_rounded,
                           label: 'Elapsed',
-                          value: _formatDuration(_timeElapsed),
+                          value: _formatDuration(_sharingService.timeElapsed),
                         ),
                       ),
                     ],
@@ -291,7 +274,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                             width: 12,
                             height: 12,
                             decoration: BoxDecoration(
-                              color: _isPaused
+                              color: _sharingService.isPaused
                                   ? AppleColors.warning
                                   : AppleColors.success,
                               shape: BoxShape.circle,
@@ -299,7 +282,7 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                           ),
                           const SizedBox(width: AppleSpacing.sm),
                           Text(
-                            _isPaused
+                            _sharingService.isPaused
                                 ? 'Location sharing paused'
                                 : 'Sharing location',
                             style: AppleTypography.subhead,
@@ -314,11 +297,11 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
                         children: [
                           Expanded(
                             child: PremiumButton(
-                              text: _isPaused ? 'Resume' : 'Pause',
-                              icon: _isPaused
+                              text: _sharingService.isPaused ? 'Resume' : 'Pause',
+                              icon: _sharingService.isPaused
                                   ? Icons.play_arrow_rounded
                                   : Icons.pause_rounded,
-                              gradient: _isPaused
+                              gradient: _sharingService.isPaused
                                   ? AppleColors.goldGradient
                                   : const LinearGradient(
                                       colors: [
