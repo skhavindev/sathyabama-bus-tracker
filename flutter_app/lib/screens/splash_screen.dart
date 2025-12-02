@@ -105,54 +105,105 @@ class _SplashScreenState extends State<SplashScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 100,
-                          height: 100,
+                          width: 120,
+                          height: 120,
                           decoration: BoxDecoration(
-                            color: AppleColors.white,
-                            borderRadius: AppleRadius.xlAll,
-                            boxShadow: AppleShadows.floating,
+                            gradient: AppleColors.goldAccentGradient,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppleColors.accentGold.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                            ],
                           ),
-                          child: Center(
-                            child: Text(
-                              'S',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: Image.asset(
+                              'assets/icons/app_icon.png',
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              filterQuality: FilterQuality.high,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+
+                        // App name - Sathyabama
+                        Transform.translate(
+                          offset: Offset(0, _slideAnimation.value),
+                          child: const Text(
+                            'Sathyabama',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppleColors.white,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        // transit+ in gold
+                        Transform.translate(
+                          offset: Offset(0, _slideAnimation.value),
+                          child: ShaderMask(
+                            shaderCallback: (bounds) => AppleColors.goldAccentGradient.createShader(bounds),
+                            child: const Text(
+                              'transit+',
                               style: TextStyle(
-                                fontFamily: AppleTypography.fontFamily,
-                                fontSize: 56,
-                                fontWeight: FontWeight.w700,
-                                color: themeManager.primaryColor,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppleColors.white,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: AppleSpacing.xl),
-                        Transform.translate(
-                          offset: Offset(0, _slideAnimation.value),
-                          child: Text(
-                            'Sathyabama',
-                            style: AppleTypography.title1.copyWith(
-                              color: AppleColors.white,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppleSpacing.xs),
-                        Transform.translate(
-                          offset: Offset(0, _slideAnimation.value),
-                          child: Text(
-                            'Bus Tracker',
-                            style: AppleTypography.title2.copyWith(
-                              color: AppleColors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppleSpacing.xxxl),
+
+                        const SizedBox(height: 10),
+
+                        // Tagline
                         Transform.translate(
                           offset: Offset(0, _slideAnimation.value * 1.5),
-                          child: Text(
-                            'Track your campus bus',
-                            style: AppleTypography.body.copyWith(
-                              color: AppleColors.white.withValues(alpha: 0.7),
+                          child: const Text(
+                            'Track Your Campus Bus',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppleColors.systemGray,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 5),
+
+                        // By line
+                        Transform.translate(
+                          offset: Offset(0, _slideAnimation.value * 1.5),
+                          child: const Text(
+                            'by',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppleColors.systemGray,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 2),
+
+                        // Developer name
+                        Transform.translate(
+                          offset: Offset(0, _slideAnimation.value * 1.5),
+                          child: ShaderMask(
+                            shaderCallback: (bounds) => AppleColors.goldAccentGradient.createShader(bounds),
+                            child: const Text(
+                              'S Khavin',
+                              style: TextStyle(
+                                fontSize: 25,
+                                fontFamily: 'AmericanSignature',
+                                color: AppleColors.white,
+                              ),
                             ),
                           ),
                         ),

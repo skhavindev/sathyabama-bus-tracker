@@ -57,7 +57,11 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final phone = _phoneController.text.trim();
+      // Add +91 prefix if not present
+      String phone = _phoneController.text.trim();
+      if (!phone.startsWith('+91')) {
+        phone = '+91$phone';
+      }
       final password = _passwordController.text;
 
       final success = await AuthService().login(phone, password);
@@ -159,10 +163,11 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
                   // Phone field
                   PremiumTextField(
                     labelText: 'Phone Number',
-                    hintText: '+91 9876543210',
+                    hintText: '9876543210',
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     prefixIcon: Icons.phone_rounded,
+                    prefixText: '+91 ',
                     errorText: _phoneError,
                     onChanged: (_) {
                       if (_phoneError != null) {

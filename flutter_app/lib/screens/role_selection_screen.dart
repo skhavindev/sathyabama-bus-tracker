@@ -118,16 +118,23 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Sathyabama',
-                              style: AppleTypography.headline.copyWith(
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
                                 color: AppleColors.white,
                               ),
                             ),
-                            Text(
-                              'Bus Tracker',
-                              style: AppleTypography.subhead.copyWith(
-                                color: AppleColors.white.withValues(alpha: 0.8),
+                            ShaderMask(
+                              shaderCallback: (bounds) => AppleColors.goldAccentGradient.createShader(bounds),
+                              child: const Text(
+                                'transit+',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppleColors.white,
+                                ),
                               ),
                             ),
                           ],

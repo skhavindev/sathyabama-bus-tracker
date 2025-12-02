@@ -807,20 +807,21 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Built by ',
+                        'by ',
                         style: AppleTypography.caption1.copyWith(
-                          color: AppleColors.labelSecondary,
+                          fontSize: 11,
+                          color: AppleColors.systemGray,
                         ),
                       ),
                       ShaderMask(
                         shaderCallback: (bounds) =>
                             AppleColors.goldAccentGradient.createShader(bounds),
-                        child: Text(
+                        child: const Text(
                           'S Khavin',
-                          style: GoogleFonts.dancingScript(
+                          style: TextStyle(
+                            fontSize: 25,
+                            fontFamily: 'AmericanSignature',
                             color: AppleColors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),

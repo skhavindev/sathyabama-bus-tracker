@@ -66,19 +66,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     setState(() => _isStartingShift = true);
 
     try {
-      // Get the route name from the route ID
-      final routeMap = _routes.firstWhere(
-        (r) => r['id'] == _selectedRoute,
-        orElse: () => {'id': _selectedRoute!, 'name': 'Unknown Route'},
-      );
-      
-      await ApiService().startShift(_selectedBus!, routeMap['name']!);
+      await ApiService().startShift(_selectedBus!, _selectedRoute!);
       if (mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => DriverTrackingScreen(
               busNumber: _selectedBus!,
-              routeName: routeMap['name']!,
+              routeName: _selectedRoute!,
             ),
           ),
         );
@@ -388,12 +382,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                               const SizedBox(width: AppleSpacing.md),
                               Expanded(
                                 child: Text(
-                                  _selectedRoute != null
-                                      ? _routes.firstWhere(
-                                          (r) => r['id'] == _selectedRoute,
-                                          orElse: () => {'name': 'Unknown Route'},
-                                        )['name']!
-                                      : 'No route assigned',
+                                  _selectedRoute ?? 'No route assigned',
                                   style: AppleTypography.body.copyWith(
                                     color: _selectedRoute != null 
                                         ? AppleColors.labelPrimary 

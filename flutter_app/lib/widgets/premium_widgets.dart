@@ -279,6 +279,7 @@ class PremiumTextField extends StatefulWidget {
   final bool obscureText;
   final TextInputType keyboardType;
   final IconData? prefixIcon;
+  final String? prefixText;
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
@@ -294,6 +295,7 @@ class PremiumTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.prefixIcon,
+    this.prefixText,
     this.suffixIcon,
     this.validator,
     this.onChanged,
@@ -379,6 +381,10 @@ class _PremiumTextFieldState extends State<PremiumTextField> {
                       size: 22,
                     )
                   : null,
+              prefixText: widget.prefixText,
+              prefixStyle: AppleTypography.body.copyWith(
+                color: AppleColors.labelPrimary,
+              ),
               suffixIcon: widget.suffixIcon,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
