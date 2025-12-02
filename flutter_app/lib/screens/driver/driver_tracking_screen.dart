@@ -64,24 +64,41 @@ class _DriverTrackingScreenState extends State<DriverTrackingScreen> {
   }
 
   void _startLocationUpdates() {
+    print('🚀 Starting location updates timer');
     _locationTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (_isPaused) return;
+      if (_isPaused) {
+        print('⏸️ Location update skipped - paused');
+        return;
+      }
 
+      print('📍 Getting current position...');
       final position = await LocationService().getCurrentPosition();
-      if (position != null && mounted) {
-        setState(() {
-          _currentPosition = position;
-          _currentLocation = LatLng(position.latitude, position.longitude);
-          _currentSpeed = position.speed * 3.6; // Convert m/s to km/h
-        });
+      if (position != null) {
+        print('✅ Position: ${position.latitude}, ${position.longitude}, Speed: ${position.speed * 3.6} km/h');
+        
+        if (mounted) {
+          setState(() {
+            _currentPosition = position;
+            _currentLocation = LatLng(position.latitude, position.longitude);
+            _currentSpeed = position.speed * 3.6; // Convert m/s to km/h
+          });
 
-        _mapController.move(_currentLocation, 15.0);
+          _mapController.move(_currentLocation, 15.0);
+        }
 
-        await ApiService().updateLocation(
-          position.latitude,
-          position.longitude,
-          position.speed,
-        );
+        try {
+          print('📤 Sending location to server...');
+          await ApiService().updateLocation(
+            position.latitude,
+            position.longitude,
+            position.speed,
+          );
+          print('✅ Location sent successfully');
+        } catch (e) {
+          print('❌ Failed to send location: $e');
+        }
+      } else {
+        print('❌ Position is null');
       }
     });
   }
