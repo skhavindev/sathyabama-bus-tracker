@@ -137,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
                           child: const Text(
                             'Sathyabama',
                             style: TextStyle(
-                              fontSize: 32,
+                              fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: AppleColors.white,
                             ),
@@ -200,7 +200,7 @@ class _SplashScreenState extends State<SplashScreen>
                             child: const Text(
                               'S Khavin',
                               style: TextStyle(
-                                fontSize: 25,
+                                fontSize: 33,
                                 fontFamily: 'AmericanSignature',
                                 color: AppleColors.white,
                               ),

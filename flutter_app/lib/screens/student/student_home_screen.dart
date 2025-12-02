@@ -819,7 +819,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                         child: const Text(
                           'S Khavin',
                           style: TextStyle(
-                            fontSize: 25,
+                            fontSize: 30,
                             fontFamily: 'AmericanSignature',
                             color: AppleColors.white,
                           ),

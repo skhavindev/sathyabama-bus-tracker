@@ -19,7 +19,7 @@ class ThemePreferences {
 
   ThemePreferences({
     this.colorTheme = ColorTheme.red,
-    this.brightnessMode = BrightnessMode.light,
+    this.brightnessMode = BrightnessMode.dark,
   });
 
   Map<String, dynamic> toJson() {

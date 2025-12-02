@@ -121,7 +121,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                             const Text(
                               'Sathyabama',
                               style: TextStyle(
-                                fontSize: 24,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: AppleColors.white,
                               ),
