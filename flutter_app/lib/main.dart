@@ -20,20 +20,20 @@ void main() {
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeManager(),
-      child: const SathyabamaBusTrackerApp(),
+      child: const SISTTransitPlusApp(),
     ),
   );
 }
 
-class SathyabamaBusTrackerApp extends StatelessWidget {
-  const SathyabamaBusTrackerApp({super.key});
+class SISTTransitPlusApp extends StatelessWidget {
+  const SISTTransitPlusApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeManager>(
       builder: (context, themeManager, child) {
         return MaterialApp(
-      title: 'Sathyabama Bus Tracker',
+      title: 'SIST Transit+',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
