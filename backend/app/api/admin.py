@@ -29,6 +29,37 @@ from ..services.cache_service import CacheService
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
+@router.get("/system/status")
+def get_system_status(db: Session = Depends(get_db)):
+    """Get system status including Redis and active buses."""
+    from ..services.cache_service import get_redis_client
+    
+    # Check Redis
+    redis_client = get_redis_client()
+    redis_status = "connected" if redis_client else "disconnected"
+    
+    # Get active buses
+    active_buses = CacheService.get_all_active_buses()
+    
+    # Get total routes
+    total_routes = db.query(BusRoute).filter(BusRoute.is_active == True).count()
+    
+    return {
+        "redis_status": redis_status,
+        "active_buses_count": len(active_buses),
+        "active_buses": [
+            {
+                "bus_number": bus.get("bus_number"),
+                "last_update": bus.get("last_update"),
+                "status": bus.get("status")
+            }
+            for bus in active_buses
+        ],
+        "total_routes": total_routes,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
 # Helper function for audit logging
 def create_audit_log(
     db: Session,
