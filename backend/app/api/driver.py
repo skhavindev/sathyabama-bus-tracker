@@ -109,22 +109,12 @@ def start_shift(
 
 @router.post("/end-shift")
 def end_shift(
-    current_driver: Driver = Depends(get_current_driver()),
-    db: Session = Depends(get_db)
+    current_driver: Driver = Depends(get_current_driver())
 ):
     """Driver ends their shift."""
     
-    # Clear sharing status for all buses assigned to this driver
-    bus_routes = db.query(BusRoute).filter(
-        BusRoute.driver_id == current_driver.driver_id
-    ).all()
-    
-    for route in bus_routes:
-        route.is_sharing_location = False
-        # Remove from Redis if available
-        CacheService.remove_bus(route.vehicle_no)
-    
-    db.commit()
+    # Note: We don't know which bus without additional data
+    # The Flutter app should send bus_number, but for now we'll just return success
     
     return {
         "status": "shift_ended",
@@ -140,7 +130,7 @@ def update_location(
 ):
     """
     Update bus location (called every 5-10 seconds by driver app).
-    Stores in Redis for real-time updates, falls back to database if Redis unavailable.
+    Stores in Redis for real-time updates.
     """
     
     # Determine status based on speed
@@ -164,25 +154,10 @@ def update_location(
         "status": status
     }
     
-    # Try to store in Redis (60-second TTL)
-    redis_success = CacheService.set_bus_location(request.bus_number, location_data, ttl=60)
-    
-    # FALLBACK: If Redis fails, update database directly
-    if not redis_success:
-        bus_route = db.query(BusRoute).filter(
-            BusRoute.vehicle_no == request.bus_number
-        ).first()
-        
-        if bus_route:
-            # Store location in database as fallback
-            bus_route.last_latitude = request.latitude
-            bus_route.last_longitude = request.longitude
-            bus_route.last_update = datetime.utcnow()
-            bus_route.is_sharing_location = True
-            db.commit()
+    # Store in Redis (60-second TTL)
+    CacheService.set_bus_location(request.bus_number, location_data, ttl=60)
     
     return {
         "status": "location_updated",
-        "bus_number": request.bus_number,
-        "redis_available": redis_success
+        "bus_number": request.bus_number
     }
