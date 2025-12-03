@@ -48,55 +48,94 @@ def get_active_buses(
     db: Session = Depends(get_db)
 ):
     """
-    Get all active buses (from Redis cache).
+    Get all active buses (from Redis cache or database fallback).
     Optionally filter by map viewport bounds.
     """
     
-    # Get all active buses from Redis
+    # Try to get from Redis first
     active_buses_data = CacheService.get_all_active_buses()
     
-    # Convert to response format
     buses = []
-    for bus_data in active_buses_data:
-        # Skip if no location data
-        if 'latitude' not in bus_data or 'longitude' not in bus_data:
-            continue
+    
+    # If Redis has data, use it
+    if active_buses_data:
+        for bus_data in active_buses_data:
+            # Skip if no location data
+            if 'latitude' not in bus_data or 'longitude' not in bus_data:
+                continue
+                
+            # Filter by bounds if provided
+            if bounds:
+                try:
+                    lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
+                    if not (lat1 <= bus_data['latitude'] <= lat2 and lng1 <= bus_data['longitude'] <= lng2):
+                        continue
+                except:
+                    pass  # Ignore invalid bounds
             
-        # Filter by bounds if provided
-        if bounds:
+            # Get route info from database
+            route_name = bus_data.get('route', 'Unknown Route')
+            bus_route = db.query(BusRoute).filter(
+                BusRoute.vehicle_no == bus_data['bus_number']
+            ).first()
+            
+            if bus_route:
+                route_name = bus_route.bus_route
+            
+            buses.append({
+                "busNumber": bus_data['bus_number'],
+                "route": route_name,
+                "latitude": bus_data['latitude'],
+                "longitude": bus_data['longitude'],
+                "speed": bus_data.get('speed', 0),
+                "heading": bus_data.get('heading', 0),
+                "lastUpdate": bus_data.get('last_update', datetime.utcnow().isoformat()),
+                "status": bus_data.get('status', 'active'),
+                "driverName": bus_data.get('driver_name', 'Unknown'),
+                "isSharingLocation": True
+            })
+    else:
+        # FALLBACK: Get from database if Redis unavailable
+        active_routes = db.query(BusRoute).filter(
+            BusRoute.is_sharing_location == True,
+            BusRoute.last_latitude.isnot(None),
+            BusRoute.last_longitude.isnot(None)
+        ).all()
+        
+        for route in active_routes:
             try:
-                lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
-                if not (lat1 <= bus_data['latitude'] <= lat2 and lng1 <= bus_data['longitude'] <= lng2):
-                    continue
-            except:
-                pass  # Ignore invalid bounds
-        
-        # Get route info from database
-        route_name = bus_data.get('route', 'Unknown Route')
-        bus_route = db.query(BusRoute).filter(
-            BusRoute.vehicle_no == bus_data['bus_number']
-        ).first()
-        
-        if bus_route:
-            route_name = bus_route.bus_route
-        
-        buses.append({
-            "busNumber": bus_data['bus_number'],
-            "route": route_name,
-            "latitude": bus_data['latitude'],
-            "longitude": bus_data['longitude'],
-            "speed": bus_data.get('speed', 0),
-            "heading": bus_data.get('heading', 0),
-            "lastUpdate": bus_data.get('last_update', datetime.utcnow().isoformat()),
-            "status": bus_data.get('status', 'active'),
-            "driverName": bus_data.get('driver_name', 'Unknown'),
-            "isSharingLocation": True
-        })
+                latitude = float(route.last_latitude)
+                longitude = float(route.last_longitude)
+                
+                # Filter by bounds if provided
+                if bounds:
+                    try:
+                        lat1, lng1, lat2, lng2 = map(float, bounds.split(','))
+                        if not (lat1 <= latitude <= lat2 and lng1 <= longitude <= lng2):
+                            continue
+                    except:
+                        pass
+                
+                buses.append({
+                    "busNumber": route.vehicle_no,
+                    "route": route.bus_route,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "speed": 0,
+                    "heading": 0,
+                    "lastUpdate": route.last_update.isoformat() if route.last_update else datetime.utcnow().isoformat(),
+                    "status": "active",
+                    "driverName": route.driver_name,
+                    "isSharingLocation": True
+                })
+            except (ValueError, TypeError):
+                continue
     
     return {
         "buses": buses,
         "timestamp": datetime.utcnow().isoformat(),
-        "count": len(buses)
+        "count": len(buses),
+        "source": "redis" if active_buses_data else "database"
     }
 
 
