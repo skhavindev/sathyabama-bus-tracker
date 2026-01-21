@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
@@ -38,9 +37,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   List<BusLocation> _filteredBuses = [];
   Timer? _refreshTimer;
   Timer? _proximityTimer;
+  Timer? _locationTimer;
   Position? _currentPosition;
   final Set<String> _notifiedBuses = {};
   final Set<String> _nearNotifiedBuses = {};
+  bool _isConnected = true;
+  DateTime? _lastSuccessfulUpdate;
 
   static const double defaultLatitude = 12.9716;
   static const double defaultLongitude = 80.2476;
@@ -59,6 +61,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     _loadTrackedBuses();
     _loadPinnedBuses();
     _getCurrentLocation();
+    _startContinuousLocationTracking();
     _loadUserProfile();
     _startAutoRefresh();
     _startProximityChecking();
@@ -70,6 +73,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     _mapController.dispose();
     _refreshTimer?.cancel();
     _proximityTimer?.cancel();
+    _locationTimer?.cancel();
     super.dispose();
   }
 
@@ -147,14 +151,19 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         setState(() {
           _activeBuses = allBuses;
           _filteredBuses = allBuses;
+          _isConnected = true;
+          _lastSuccessfulUpdate = DateTime.now();
         });
       }
     } catch (e) {
+      print('Failed to fetch buses: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load buses: $e')),
-        );
+        setState(() {
+          _isConnected = false;
+        });
       }
+      // Don't show error snackbar for every failed request to avoid spam
+      // Only show if it's the first load or user manually refreshes
     }
   }
 
@@ -169,13 +178,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   }
 
   void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       _loadBuses();
     });
   }
 
   void _startProximityChecking() {
-    _proximityTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+    _proximityTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       _currentPosition = await LocationService().getCurrentPosition();
       if (_currentPosition == null) return;
 
@@ -211,6 +220,23 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               distance.round(),
             );
             _notifiedBuses.add(bus.busNumber);
+            
+            // Show in-app notification as well
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.notifications_active, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Text('Bus ${bus.busNumber} is ${distance.round()}m away!'),
+                    ],
+                  ),
+                  backgroundColor: AppleColors.accentGold,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
           } else if (distance > trackedBus.radiusMeters) {
             _notifiedBuses.remove(bus.busNumber);
           }
@@ -369,6 +395,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        print('⚠️ Location services are disabled');
         return;
       }
 
@@ -376,11 +403,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
+          print('⚠️ Location permission denied');
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
+        print('⚠️ Location permission denied forever');
         return;
       }
 
@@ -391,14 +420,35 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       if (mounted) {
         setState(() {
           _studentLocation = LatLng(position.latitude, position.longitude);
+          _currentPosition = position;
         });
 
         // Center map on student location
         _mapController.move(_studentLocation, 15.0);
+        print('✅ Initial student location: ${position.latitude}, ${position.longitude}');
       }
     } catch (e) {
-      // Silently fail
+      print('❌ Error getting initial location: $e');
     }
+  }
+
+  void _startContinuousLocationTracking() {
+    _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      try {
+        Position? position = await LocationService().getCurrentPosition();
+        if (position != null && mounted) {
+          setState(() {
+            _studentLocation = LatLng(position.latitude, position.longitude);
+            _currentPosition = position;
+          });
+          
+          // Log for debugging
+          print('📍 Student location updated: ${position.latitude}, ${position.longitude}');
+        }
+      } catch (e) {
+        print('❌ Failed to update student location: $e');
+      }
+    });
   }
 
   void _centerOnBus(String busNumber) {
@@ -592,11 +642,34 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Text(
-                                  'Welcome $_userName',
-                                  style: AppleTypography.caption1.copyWith(
-                                    color: AppleColors.white.withValues(alpha: 0.8),
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Welcome $_userName',
+                                      style: AppleTypography.caption1.copyWith(
+                                        color: AppleColors.white.withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: _isConnected ? AppleColors.success : AppleColors.warning,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _isConnected ? 'Online' : 'Offline',
+                                      style: AppleTypography.caption2.copyWith(
+                                        color: _isConnected 
+                                            ? AppleColors.success 
+                                            : AppleColors.warning,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -617,6 +690,27 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             icon: const Icon(Icons.settings_rounded,
                                 color: AppleColors.white),
                             onPressed: _showSettings,
+                          ),
+                          const SizedBox(width: AppleSpacing.xs),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppleColors.success.withValues(alpha: 0.2),
+                              borderRadius: AppleRadius.smAll,
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.refresh_rounded,
+                                  color: AppleColors.success),
+                              onPressed: () {
+                                _loadBuses();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Refreshing bus data...'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                              tooltip: 'Refresh bus data',
+                            ),
                           ),
                           const SizedBox(width: AppleSpacing.xs),
                           IconButton(
@@ -823,9 +917,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                         child: const Text(
                           'S Khavin',
                           style: TextStyle(
-                            fontSize: 30,
-                            fontFamily: 'AmericanSignature',
+                            fontSize: 28,
+                            fontFamily: 'CaliforniaSignature',
                             color: AppleColors.white,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ),
@@ -1002,6 +1097,7 @@ class _BusDetailsContent extends StatelessWidget {
                   icon: Icons.access_time_rounded,
                   label: 'Last Update',
                   value: _formatTime(bus.lastUpdate),
+                  isLive: bus.status == 'active' && DateTime.now().difference(bus.lastUpdate).inSeconds < 30,
                 ),
               ),
             ],
@@ -1034,21 +1130,32 @@ class _BusDetailsContent extends StatelessWidget {
               // Bell icon for "notify when near" (quick track)
               Container(
                 decoration: BoxDecoration(
+                  gradient: isTracked 
+                      ? null 
+                      : AppleColors.goldAccentGradient,
+                  color: isTracked ? AppleColors.systemGray6 : null,
                   border: Border.all(
-                    color: isTracked ? AppleColors.systemGray : AppleColors.accentGold,
+                    color: isTracked ? AppleColors.systemGray : Colors.transparent,
                     width: 2,
                   ),
                   borderRadius: AppleRadius.mdAll,
+                  boxShadow: isTracked ? null : [
+                    BoxShadow(
+                      color: AppleColors.accentGold.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ],
                 ),
                 child: IconButton(
                   icon: Icon(
                     isTracked
-                        ? Icons.notifications_active
+                        ? Icons.notifications_off
                         : Icons.notifications_active_rounded,
-                    color: isTracked ? AppleColors.systemGray : AppleColors.accentGold,
+                    color: isTracked ? AppleColors.systemGray : AppleColors.white,
                   ),
                   onPressed: isTracked ? null : onNotifyNear,
-                  tooltip: isTracked ? 'Already tracking' : 'Set notification',
+                  tooltip: isTracked ? 'Already tracking' : 'Get notified when bus is near',
                 ),
               ),
               const SizedBox(width: AppleSpacing.sm),
@@ -1074,9 +1181,11 @@ class _BusDetailsContent extends StatelessWidget {
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inSeconds < 30) return 'Live';
+    if (diff.inMinutes < 1) return '${diff.inSeconds}s ago';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    return '${diff.inHours}h ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }
 
@@ -1084,11 +1193,13 @@ class _StatItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final bool isLive;
 
   const _StatItem({
     required this.icon,
     required this.label,
     required this.value,
+    this.isLive = false,
   });
 
   @override
@@ -1098,11 +1209,32 @@ class _StatItem extends StatelessWidget {
       backgroundColor: AppleColors.systemGray6,
       child: Column(
         children: [
-          Icon(icon, color: AppleColors.accentGold, size: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: AppleColors.accentGold, size: 24),
+              if (isLive) ...[
+                const SizedBox(width: 4),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppleColors.success,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: AppleSpacing.sm),
           Text(label, style: AppleTypography.caption1),
           const SizedBox(height: AppleSpacing.xs),
-          Text(value, style: AppleTypography.headline),
+          Text(
+            value, 
+            style: AppleTypography.headline.copyWith(
+              color: isLive ? AppleColors.success : AppleColors.labelPrimary,
+            ),
+          ),
         ],
       ),
     );

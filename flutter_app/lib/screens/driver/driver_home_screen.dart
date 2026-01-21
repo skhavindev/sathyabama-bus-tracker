@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../config/apple_theme.dart';
 import '../../widgets/premium_widgets.dart';
 import '../../services/api_service.dart';
-import '../../models/driver_profile.dart';
 import 'driver_tracking_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {

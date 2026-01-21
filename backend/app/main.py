@@ -2,6 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from datetime import datetime
 from .config import settings
 from .database import Base, engine, get_db
 from .api import auth, driver, student, routes, buses, admin
@@ -140,7 +141,8 @@ def root():
         "message": "Sathyabama Bus Tracking API",
         "version": "1.0.0",
         "docs": "/docs",
-        "admin": "/admin"
+        "admin": "/admin",
+        "map": "/map"
     }
 
 
@@ -174,6 +176,22 @@ def admin_dashboard():
             }
         )
     return {"message": "Admin dashboard not found"}
+
+
+@app.get("/map")
+def live_map():
+    """Serve live bus tracking map."""
+    static_file = os.path.join(os.path.dirname(__file__), "static", "map.html")
+    if os.path.exists(static_file):
+        return FileResponse(
+            static_file,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    return {"message": "Map not found"}
 
 
 @app.get("/health")
@@ -210,7 +228,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    from datetime import datetime
     
     uvicorn.run(
         "app.main:app",

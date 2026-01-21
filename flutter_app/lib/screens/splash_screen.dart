@@ -200,9 +200,10 @@ class _SplashScreenState extends State<SplashScreen>
                             child: const Text(
                               'S Khavin',
                               style: TextStyle(
-                                fontSize: 33,
-                                fontFamily: 'AmericanSignature',
+                                fontSize: 31,
+                                fontFamily: 'CaliforniaSignature',
                                 color: AppleColors.white,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),

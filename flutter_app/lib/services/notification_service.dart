@@ -106,6 +106,7 @@ class NotificationService {
       // Play a simple beep sound (you can add a custom sound file to assets)
       await _audioPlayer.play(AssetSource('sounds/notification.mp3'));
     } catch (e) {
+      // Fallback to system notification sound
       print('Error playing notification sound: $e');
     }
   }

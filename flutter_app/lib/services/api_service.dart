@@ -11,8 +11,9 @@ class ApiService {
   ApiService._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(seconds: 10),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -148,7 +149,18 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['buses'] ?? [];
-        return data.map((json) => BusLocation.fromJson(json)).toList();
+        return data.map((json) {
+          // Convert camelCase to snake_case for the model
+          return BusLocation.fromJson({
+            'bus_number': json['busNumber'],
+            'route': json['route'],
+            'latitude': json['latitude'],
+            'longitude': json['longitude'],
+            'speed': json['speed'],
+            'last_update': json['lastUpdate'],
+            'status': json['status'],
+          });
+        }).toList();
       }
       return [];
     } on DioException catch (e) {

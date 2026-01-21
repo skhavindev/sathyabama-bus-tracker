@@ -58,6 +58,9 @@ Backend runs at: http://localhost:8000
 - Phone: +919876543210
 - Password: admin
 
+**Live Bus Map**: http://localhost:8000/map
+- Real-time bus tracking on OpenStreetMap
+
 ### Flutter App
 
 ```bash

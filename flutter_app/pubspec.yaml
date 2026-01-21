@@ -52,6 +52,9 @@ flutter:
     - assets/sounds/
   
   fonts:
+    - family: CaliforniaSignature
+      fonts:
+        - asset: assets/fonts/CaliforniaSignature.ttf
     - family: AmericanSignature
       fonts:
         - asset: assets/fonts/AmericanSignature-w14En.ttf
