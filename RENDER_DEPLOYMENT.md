@@ -89,8 +89,19 @@ pip install -r requirements.txt && python init_db.py
 
 ### 3. Start Command
 
+**Option 1 (Recommended):**
+```bash
+python start.py
+```
+
+**Option 2 (Alternative with Gunicorn):**
 ```bash
 gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+```
+
+**Option 3 (Simple Uvicorn):**
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
 ### 4. Add Gunicorn to requirements.txt

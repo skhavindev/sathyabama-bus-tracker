@@ -226,12 +226,23 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
+# Create a function to run the app (for Render deployment)
+def create_app():
+    """Create and return the FastAPI app instance."""
+    return app
+
+# For direct execution (local development)
 if __name__ == "__main__":
     import uvicorn
+    
+    # Get port from environment variable (for Render deployment) or default to 8000
+    port = int(os.environ.get("PORT", 8000))
+    
+    print(f"🚀 Starting server on port {port}")
     
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True
+        port=port,
+        reload=True if os.environ.get("ENVIRONMENT") != "production" else False
     )
