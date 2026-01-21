@@ -140,10 +140,15 @@
             };
             
             ws.onmessage = function(event) {
+                console.log('📨 WebSocket message received:', event.data);
                 const data = JSON.parse(event.data);
+                console.log('📊 Parsed data:', data);
                 
                 if (data.type === 'bus_update' && data.buses) {
+                    console.log('🚌 Bus update received with', data.buses.length, 'buses');
                     updateBusMarkers(data.buses);
+                } else {
+                    console.log('❌ Invalid message format or no buses:', data);
                 }
             };
             
@@ -162,6 +167,8 @@
         }
         
         function updateBusMarkers(buses) {
+            console.log('📍 Updating bus markers:', buses);
+            
             // Clear existing markers
             Object.values(busMarkers).forEach(marker => {
                 map.removeLayer(marker);
@@ -169,6 +176,8 @@
             
             // Add new markers
             buses.forEach(bus => {
+                console.log('🚌 Processing bus:', bus);
+                
                 if (bus.latitude && bus.longitude) {
                     const marker = L.marker([bus.latitude, bus.longitude], {
                         icon: busIcon
@@ -204,12 +213,16 @@
                     marker.bindPopup(popupContent);
                     
                     busMarkers[bus.bus_number || bus.busNumber] = marker;
+                    console.log('✅ Added marker for bus:', bus.bus_number || bus.busNumber);
+                } else {
+                    console.log('❌ Bus missing coordinates:', bus);
                 }
             });
             
             // Update status
             const busCount = buses.length;
             document.getElementById('connection-status').textContent = `Connected - ${busCount} buses active`;
+            console.log('📊 Total buses displayed:', busCount);
         }
         
         // Start WebSocket connection

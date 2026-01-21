@@ -206,24 +206,31 @@ async def websocket_endpoint(websocket: WebSocket):
     Students connect here to receive live updates.
     """
     await manager.connect(websocket)
+    print(f"🔌 WebSocket client connected. Total connections: {len(manager.active_connections)}")
     
     try:
         while True:
             # Wait for client message (ping/pong or viewport update)
             data = await websocket.receive_text()
+            print(f"📨 Received WebSocket message: {data}")
             
             # Get all active buses from Redis
             active_buses = CacheService.get_all_active_buses()
+            print(f"🚌 Found {len(active_buses)} active buses: {[bus.get('bus_number') for bus in active_buses]}")
             
             # Send bus updates to client
-            await websocket.send_json({
+            response = {
                 "type": "bus_update",
                 "buses": active_buses,
                 "timestamp": str(datetime.utcnow())
-            })
+            }
+            
+            await websocket.send_json(response)
+            print(f"📤 Sent bus update to client: {len(active_buses)} buses")
             
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+        print(f"🔌 WebSocket client disconnected. Remaining connections: {len(manager.active_connections)}")
 
 
 # Create a function to run the app (for Render deployment)

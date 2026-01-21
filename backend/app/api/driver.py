@@ -155,9 +155,13 @@ def update_location(
     }
     
     # Store in Redis (60-second TTL)
-    CacheService.set_bus_location(request.bus_number, location_data, ttl=60)
+    cache_success = CacheService.set_bus_location(request.bus_number, location_data, ttl=60)
+    
+    print(f"🚌 Location update for bus {request.bus_number}: {location_data}")
+    print(f"📦 Cache success: {cache_success}")
     
     return {
         "status": "location_updated",
-        "bus_number": request.bus_number
+        "bus_number": request.bus_number,
+        "cache_success": cache_success
     }
